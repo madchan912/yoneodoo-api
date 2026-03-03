@@ -1,0 +1,47 @@
+package com.yoneodoo.api.entity;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = "recipes")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Recipe {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 255)
+    private String title; // 레시피 제목
+
+    @Column(name = "youtube_url", nullable = false, length = 500)
+    private String youtubeUrl; // 유튜브 Iframe에 쓸 URL
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    // 양방향 매핑
+    @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RecipeIngredient> recipeIngredients = new ArrayList<>();
+
+    public Recipe(String title, String youtubeUrl) {
+        this.title = title;
+        this.youtubeUrl = youtubeUrl;
+    }
+
+    // 연관관계 편의 메서드
+    public void addRecipeIngredient(RecipeIngredient recipeIngredient) {
+        this.recipeIngredients.add(recipeIngredient);
+        recipeIngredient.setRecipe(this);
+    }
+}

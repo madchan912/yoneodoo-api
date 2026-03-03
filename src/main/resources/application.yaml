@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://db:5432/yoneodoo
+    url: jdbc:postgresql://localhost:5433/yoneodoo
     username: root
     password: 1234
     driver-class-name: org.postgresql.Driver
