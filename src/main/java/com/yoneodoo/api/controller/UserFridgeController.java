@@ -1,9 +1,12 @@
 package com.yoneodoo.api.controller;
 
 import com.yoneodoo.api.dto.FridgeAddRequest;
+import com.yoneodoo.api.dto.FridgeIngredientResponse;
 import com.yoneodoo.api.service.UserFridgeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/fridge")
@@ -19,5 +22,12 @@ public class UserFridgeController {
         userFridgeService.addIngredientsToFridge(request);
 
         return "냉장고에 재료가 성공적으로 추가되었습니다!";
+    }
+
+    @GetMapping("/{userId}")
+    public List<FridgeIngredientResponse> getMyFridge(@PathVariable(name = "userId") Long userId) {
+
+        // 서비스의 조회 로직을 호출해서 바로 리턴!
+        return userFridgeService.getMyFridgeIngredients(userId);
     }
 }

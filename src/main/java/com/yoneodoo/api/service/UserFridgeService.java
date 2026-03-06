@@ -1,11 +1,15 @@
 package com.yoneodoo.api.service;
 
 import com.yoneodoo.api.dto.FridgeAddRequest;
+import com.yoneodoo.api.dto.FridgeIngredientResponse;
+import com.yoneodoo.api.entity.UserFridge;
+import com.yoneodoo.api.repository.UserFridgeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -15,6 +19,7 @@ public class UserFridgeService {
     // private final UserRepository userRepository;
     // private final IngredientRepository ingredientRepository;
     // private final UserIngredientRepository userIngredientRepository;
+    private final UserFridgeRepository userFridgeRepository;
 
     @Transactional
     public void addIngredientsToFridge(FridgeAddRequest request) {
@@ -36,5 +41,22 @@ public class UserFridgeService {
         */
 
         System.out.println("✅ " + request.getUserId() + "번 유저의 냉장고에 재료 " + request.getIngredientIds().size() + "개 저장 완료!");
+    }
+
+    // 내 냉장고 재료 조회 로직 (GET)
+    @Transactional(readOnly = true)
+    public List<FridgeIngredientResponse> getMyFridgeIngredients(Long userId) {
+
+        // 1. 유저 ID로 내 냉장고(UserFridge) 테이블을 싹 다 뒤져서 가져옵니다.
+        List<UserFridge> myFridgeList = userFridgeRepository.findByUserId(userId);
+
+        // 2. DB에서 꺼낸 엔티티들을 방금 만든 DTO 포장지로 예쁘게 변환해서 리턴합니다.
+        return myFridgeList.stream()
+                .map(fridge -> new FridgeIngredientResponse(
+                        fridge.getIngredient().getId(),
+                        fridge.getIngredient().getName(),
+                        fridge.getIngredient().getType().name() // Enum을 String("MAIN", "SUB")으로 변환!
+                ))
+                .collect(Collectors.toList());
     }
 }
