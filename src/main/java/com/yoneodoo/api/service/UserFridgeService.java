@@ -59,4 +59,14 @@ public class UserFridgeService {
                 ))
                 .collect(Collectors.toList());
     }
+
+    // 내 냉장고 재료 삭제 로직 (DELETE)
+    @Transactional
+    public void removeIngredientFromFridge(Long userId, Long ingredientId) {
+
+        // Repository의 삭제 메서드를 호출해서 DB에서 싹 날려버립니다!
+        userFridgeRepository.deleteByUserIdAndIngredientId(userId, ingredientId);
+
+        System.out.println("✅ " + userId + "번 유저의 냉장고에서 " + ingredientId + "번 재료 삭제 완료!");
+    }
 }
