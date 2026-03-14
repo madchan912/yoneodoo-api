@@ -37,6 +37,10 @@ public class Recipe {
     @Column(columnDefinition = "jsonb")
     private List<String> ingredients;
 
+    // 🚀 [추가됨] 데이터의 수집 상태를 기록하는 칸 (SUCCESS, NO_SUBTITLES 등)
+    @Column(length = 20)
+    private String status;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
