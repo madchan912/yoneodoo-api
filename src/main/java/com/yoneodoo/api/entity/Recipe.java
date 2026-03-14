@@ -5,6 +5,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,11 +28,20 @@ public class Recipe {
     @Column(name = "youtube_url", nullable = false, length = 500)
     private String youtubeUrl; // 유튜브 Iframe에 쓸 URL
 
+    // 🚀 [추가됨] 파이썬이 파놓은 11자리 영상 ID 칸
+    @Column(name = "video_id", unique = true, length = 50)
+    private String videoId;
+
+    // 🚀 [추가됨] 파이썬이 JSONB로 넣은 재료 목록을 자바 List로 자동 변환!
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<String> ingredients;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    // 양방향 매핑
+    // 기존 양방향 매핑 유지
     @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RecipeIngredient> recipeIngredients = new ArrayList<>();
 
