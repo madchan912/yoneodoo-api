@@ -32,10 +32,11 @@ public class Recipe {
     @Column(name = "video_id", unique = true, length = 50)
     private String videoId;
 
-    // 🚀 [추가됨] 파이썬이 JSONB로 넣은 재료 목록을 자바 List로 자동 변환!
+    // 기존: private List<String> ingredients;
+    // 변경 후 👇
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private List<String> ingredients;
+    private List<com.yoneodoo.api.dto.RecipeIngredientData> ingredients;
 
     // 🚀 [추가됨] 데이터의 수집 상태를 기록하는 칸 (SUCCESS, NO_SUBTITLES 등)
     @Column(length = 20)

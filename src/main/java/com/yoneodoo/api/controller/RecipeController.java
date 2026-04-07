@@ -3,6 +3,7 @@ package com.yoneodoo.api.controller;
 import com.yoneodoo.api.entity.Recipe;
 import com.yoneodoo.api.repository.RecipeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -10,8 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/recipes") // 다른 API들과 버전(v1) 깔맞춤!
+@RequestMapping("/api/v1/recipes")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173") // 🚀 리액트(Vite 기본 포트)에서 호출할 수 있게 허락!
 public class RecipeController {
 
     private final RecipeRepository recipeRepository;
