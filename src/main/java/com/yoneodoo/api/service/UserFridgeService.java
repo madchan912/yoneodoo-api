@@ -1,72 +1,65 @@
 package com.yoneodoo.api.service;
 
 import com.yoneodoo.api.dto.FridgeAddRequest;
-import com.yoneodoo.api.dto.FridgeIngredientResponse;
-import com.yoneodoo.api.entity.UserFridge;
-import com.yoneodoo.api.repository.UserFridgeRepository;
+import com.yoneodoo.api.entity.User;
+import com.yoneodoo.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class UserFridgeService {
 
-    // 필요한 Repository들을 주입받습니다. (이름은 개발자님 환경에 맞게!)
-    // private final UserRepository userRepository;
-    // private final IngredientRepository ingredientRepository;
-    // private final UserIngredientRepository userIngredientRepository;
-    private final UserFridgeRepository userFridgeRepository;
+    // 🚀 이제 잡다한 Repository는 안 쓰고 오직 UserRepository만 씁니다!
+    private final UserRepository userRepository;
 
+    // 1. 냉장고에 재료 추가
     @Transactional
     public void addIngredientsToFridge(FridgeAddRequest request) {
-        // 1. 유저가 진짜 있는지 확인 (나중엔 예외 처리 추가)
-        // User user = userRepository.findById(request.getUserId()).orElseThrow();
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
-        // 2. 넘어온 재료 ID 목록(1, 2, 4)으로 DB에서 재료들을 싹 다 조회
-        // List<Ingredient> ingredients = ingredientRepository.findAllById(request.getIngredientIds());
-
-        // 3. 유저의 냉장고(UserIngredient)에 하나씩 예쁘게 포장해서 저장
-        /*
-        for (Ingredient ingredient : ingredients) {
-            UserIngredient userIngredient = UserIngredient.builder()
-                    .user(user)
-                    .ingredient(ingredient)
-                    .build();
-            userIngredientRepository.save(userIngredient);
+        // 냉장고가 비어있으면 초기화
+        if (user.getFridgeIngredients() == null) {
+            user.setFridgeIngredients(new ArrayList<>());
         }
-        */
 
-        System.out.println("✅ " + request.getUserId() + "번 유저의 냉장고에 재료 " + request.getIngredientIds().size() + "개 저장 완료!");
+        // 기존 냉장고에 없는 재료만 쏙쏙 골라서 추가 (중복 방지)
+        for (String newIngredient : request.getIngredients()) {
+            if (!user.getFridgeIngredients().contains(newIngredient)) {
+                user.getFridgeIngredients().add(newIngredient);
+            }
+        }
+
+        userRepository.save(user); // JPA가 알아서 JSONB로 업데이트해 줍니다!
+        System.out.println("✅ " + request.getUserId() + "번 유저의 냉장고 업데이트 완료!");
     }
 
-    // 내 냉장고 재료 조회 로직 (GET)
+    // 2. 내 냉장고 재료 조회
     @Transactional(readOnly = true)
-    public List<FridgeIngredientResponse> getMyFridgeIngredients(Long userId) {
+    public List<String> getMyFridgeIngredients(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
-        // 1. 유저 ID로 내 냉장고(UserFridge) 테이블을 싹 다 뒤져서 가져옵니다.
-        List<UserFridge> myFridgeList = userFridgeRepository.findByUserId(userId);
-
-        // 2. DB에서 꺼낸 엔티티들을 방금 만든 DTO 포장지로 예쁘게 변환해서 리턴합니다.
-        return myFridgeList.stream()
-                .map(fridge -> new FridgeIngredientResponse(
-                        fridge.getIngredient().getId(),
-                        fridge.getIngredient().getName(),
-                        fridge.getIngredient().getType().name() // Enum을 String("MAIN", "SUB")으로 변환!
-                ))
-                .collect(Collectors.toList());
+        // 🚀 DTO 변환 없이 그냥 문자열 리스트(["계란", "고추장"]) 바로 리턴!
+        return user.getFridgeIngredients() != null ? user.getFridgeIngredients() : new ArrayList<>();
     }
 
-    // 내 냉장고 재료 삭제 로직 (DELETE)
+    // 3. 내 냉장고 재료 삭제
     @Transactional
-    public void removeIngredientFromFridge(Long userId, Long ingredientId) {
+    public void removeIngredientFromFridge(Long userId, String ingredientName) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
-        // Repository의 삭제 메서드를 호출해서 DB에서 싹 날려버립니다!
-        userFridgeRepository.deleteByUserIdAndIngredientId(userId, ingredientId);
-
-        System.out.println("✅ " + userId + "번 유저의 냉장고에서 " + ingredientId + "번 재료 삭제 완료!");
+        if (user.getFridgeIngredients() != null) {
+            // 리스트에서 해당 이름 쏙 빼고 저장
+            user.getFridgeIngredients().remove(ingredientName);
+            userRepository.save(user);
+            System.out.println("✅ " + userId + "번 유저의 냉장고에서 [" + ingredientName + "] 삭제 완료!");
+        }
     }
 }

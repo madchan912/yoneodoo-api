@@ -4,10 +4,17 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter; // 🚀 내용 수정을 위해 Setter 추가!
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
 @Getter
+@Setter // 🚀 추가됨!
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
 
@@ -15,7 +22,6 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // String 타입에서 Enum 타입으로 변경! (DB에는 문자열로 저장되도록 STRING 옵션 추가)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProviderType provider;
@@ -25,6 +31,11 @@ public class User {
 
     @Column(nullable = false, length = 50)
     private String nickname;
+
+    // 🚀 [추가됨] 내 냉장고 재료들을 문자열 리스트로 심플하게 저장!
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "fridge_ingredients", columnDefinition = "jsonb")
+    private List<String> fridgeIngredients = new ArrayList<>();
 
     public User(ProviderType provider, String providerId, String nickname) {
         this.provider = provider;
