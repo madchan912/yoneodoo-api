@@ -26,13 +26,16 @@ public class Recipe {
     @Column(nullable = false, length = 255)
     private String title;
 
+    // 유튜버 이름을 저장할 컬럼을 추가했습니다.
+    @Column(name = "youtuber_name", length = 100)
+    private String youtuberName;
+
     @Column(name = "youtube_url", nullable = false, length = 500)
     private String youtubeUrl;
 
     @Column(name = "video_id", unique = true, length = 50)
     private String videoId;
 
-    // JSONB 형식으로 재료 데이터를 저장합니다.
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private List<com.yoneodoo.api.dto.RecipeIngredientData> ingredients;
@@ -47,8 +50,10 @@ public class Recipe {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    public Recipe(String title, String youtubeUrl) {
+    // 생성자에서 유튜버 이름을 함께 받을 수 있도록 파라미터를 추가했습니다.
+    public Recipe(String title, String youtubeUrl, String youtuberName) {
         this.title = title;
         this.youtubeUrl = youtubeUrl;
+        this.youtuberName = youtuberName;
     }
 }

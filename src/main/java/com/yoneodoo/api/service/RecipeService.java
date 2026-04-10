@@ -25,8 +25,12 @@ public class RecipeService {
         }
 
         // 2. 새 레시피 엔티티 생성 및 데이터 세팅
-        // (Recipe 엔티티의 생성자가 protected이므로 기본 생성자 호출 후 Setter 사용)
-        Recipe recipe = new Recipe(request.getTitle(), request.getYoutubeUrl());
+        // (파이썬에서 받은 유튜버 이름을 포함하여 생성)
+        Recipe recipe = new Recipe(
+                request.getTitle(),
+                request.getYoutubeUrl(),
+                request.getYoutuberName()
+        );
 
         recipe.setVideoId(request.getVideoId());
         recipe.setStatus(request.getStatus());

@@ -15,6 +15,7 @@ public class RecipeCreateRequest {
     private String youtubeUrl;
     private String status;
     private String transcript;
+    private String youtuberName;
 
     // 엔티티에서 사용하는 DTO를 그대로 리스트로 받습니다.
     private List<RecipeIngredientData> ingredients;

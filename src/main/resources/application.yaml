@@ -1,10 +1,12 @@
 spring:
   datasource:
-    # ⭐ 데브옵스 핵심: ${환경변수명:기본값} 문법을 사용합니다!
-    # 환경변수(DB_HOST 등)가 들어오면 그걸 쓰고, 없으면 뒤에 있는 localhost나 1234를 씁니다.
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:yoneodoo}
-    username: ${DB_USER:root}
-    password: ${DB_PASSWORD:1234}
+    # 1. 방금 받은 주소 앞에 'jdbc:' 를 붙여서 통째로 넣습니다.
+    url: jdbc:postgresql://ep-lucky-band-a1jwkc0u.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+
+    # 2. 아이디와 비밀번호도 쏙쏙 빼서 넣습니다.
+    username: neondb_owner
+    password: npg_8ShFrg5vBQWH
+
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -16,11 +18,8 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-# 🏥 2단계: 로그 세팅 (12-Factor App 원칙)
-# 컨테이너 환경에서는 로그를 파일로 남기지 않고 무조건 콘솔(표준 출력 stdout)로만 쏴야 합니다.
-# (스프링부트 기본값이 콘솔이지만, 파일 로그를 절대 안 남기겠다고 명시적으로 박아두는 겁니다.)
 logging:
   level:
     root: INFO
   file:
-    name: "" # 파일명 설정을 비워서 파일 로그 생성을 원천 차단!
+    name: ""
