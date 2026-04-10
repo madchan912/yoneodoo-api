@@ -13,7 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/ingredients")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173") // 🚀 [핵심] 리액트의 접근을 허락해 줍니다!
+@CrossOrigin(origins = "*") // 🚀 [핵심] 리액트의 접근을 허락해 줍니다!
 public class IngredientController {
 
     private final IngredientSearchService ingredientSearchService;
