@@ -1,12 +1,8 @@
 spring:
   datasource:
-    # 1. 방금 받은 주소 앞에 'jdbc:' 를 붙여서 통째로 넣습니다.
-    url: jdbc:postgresql://ep-lucky-band-a1jwkc0u.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-
-    # 2. 아이디와 비밀번호도 쏙쏙 빼서 넣습니다.
-    username: neondb_owner
-    password: npg_8ShFrg5vBQWH
-
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
