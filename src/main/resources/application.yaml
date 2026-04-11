@@ -1,21 +1,3 @@
 spring:
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-
-logging:
-  level:
-    root: INFO
-  file:
-    name: ""
+  profiles:
+    active: local # 내 컴퓨터에서 켤 때는 무조건 'local' 모드로 작동하라는 뜻입니다.

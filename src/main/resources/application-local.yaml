@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    # 🚀 도커에 설정하신 외부 포트(5433)와 DB 이름(yoneodoo)으로 맞췄습니다!
+    url: jdbc:postgresql://localhost:5433/yoneodoo
+    username: root
+    password: 1234
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+logging:
+  level:
+    root: INFO
