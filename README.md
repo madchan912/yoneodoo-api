@@ -31,3 +31,7 @@ Render 서버에 배포할 때 다음 환경변수(Environment Variables) 설정
 - `ADMIN_SECRET` — **`/api/v1/admin/**`** 접근 시 HTTP 헤더 `X-Admin-Secret`과 비교. 미설정이면 어드민 경로는 503(앱 기동은 유지).
 
 로컬(`local` 프로필) 기본값은 `application-local.yaml`의 `yoneodoo.admin.secret`을 참고하거나, 동일 키로 `ADMIN_SECRET` 환경변수를 덮어쓸 수 있습니다.
+
+## 운영 DB → 로컬 DB 동기화 (선택)
+
+Neon 등 운영 데이터를 로컬 Docker PostgreSQL로 덮어쓰는 스크립트는 `scripts/` 디렉터리를 참고하세요. (`sync_prod_to_local_db.py`, `.env.sync.example`, `scripts/README.md`)
