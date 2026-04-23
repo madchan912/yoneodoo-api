@@ -18,3 +18,8 @@ spring:
 logging:
   level:
     root: INFO
+
+# 어드민 API (/api/v1/admin/**) — X-Admin-Secret 헤더와 일치해야 함. 로컬 기본값은 개발용이므로 반드시 변경 권장.
+yoneodoo:
+  admin:
+    secret: ${ADMIN_SECRET:dev-admin-secret-change-me}

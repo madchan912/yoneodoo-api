@@ -28,3 +28,6 @@ Render 서버에 배포할 때 다음 환경변수(Environment Variables) 설정
 - `DB_URL` (Neon DB JDBC 주소)
 - `DB_USER` (운영 DB 계정명)
 - `DB_PASSWORD` (운영 DB 비밀번호)
+- `ADMIN_SECRET` — **`/api/v1/admin/**`** 접근 시 HTTP 헤더 `X-Admin-Secret`과 비교. 미설정이면 어드민 경로는 503(앱 기동은 유지).
+
+로컬(`local` 프로필) 기본값은 `application-local.yaml`의 `yoneodoo.admin.secret`을 참고하거나, 동일 키로 `ADMIN_SECRET` 환경변수를 덮어쓸 수 있습니다.

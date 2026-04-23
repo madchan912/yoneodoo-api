@@ -1,3 +1,8 @@
 spring:
   profiles:
     active: local # 내 컴퓨터에서 켤 때는 무조건 'local' 모드로 작동하라는 뜻입니다.
+
+# 운영은 환경변수 ADMIN_SECRET 필수. 프로필별 기본값은 application-local / application-prod 참고.
+yoneodoo:
+  admin:
+    secret: ${ADMIN_SECRET:}

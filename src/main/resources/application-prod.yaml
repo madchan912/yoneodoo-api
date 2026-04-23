@@ -17,3 +17,8 @@ spring:
 logging:
   level:
     root: INFO
+
+# Render 등: ADMIN_SECRET 환경변수로 설정. 미설정 시 빈 값 → 어드민 경로는 503 (기동은 계속됨)
+yoneodoo:
+  admin:
+    secret: ${ADMIN_SECRET:}
