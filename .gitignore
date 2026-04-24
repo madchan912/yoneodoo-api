@@ -40,3 +40,5 @@ out/
 scripts/.env.sync
 scripts/*.dump
 scripts/.tmp/
+backup.dump
+backup.sql
