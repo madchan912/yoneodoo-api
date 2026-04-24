@@ -2,6 +2,7 @@ package com.yoneodoo.api.admin;
 
 import com.yoneodoo.api.admin.dto.AdminDashboardStatsResponse;
 import com.yoneodoo.api.admin.dto.AdminRecipeRowResponse;
+import com.yoneodoo.api.admin.dto.IngredientMappingRowResponse;
 import com.yoneodoo.api.admin.dto.IngredientMappingSaveRequest;
 import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRowResponse;
 import com.yoneodoo.api.dto.RecipeIngredientData;
@@ -53,6 +54,37 @@ public class AdminService {
             default -> recipeRepository.findAll();
         };
         return rows.stream().map(this::toRow).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<IngredientMappingRowResponse> listMappedIngredients() {
+        return ingredientMappingRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(m -> new IngredientMappingRowResponse(
+                        m.getRawName(),
+                        m.getMasterName(),
+                        m.getCreatedAt()
+                ))
+                .toList();
+    }
+
+    /**
+     * {@code rawName}은 URL 경로로 전달되며, DB와 동일 규칙으로 정규화한 뒤 조회·삭제한다.
+     *
+     * @return 삭제 성공 여부(없으면 false)
+     */
+    @Transactional
+    public boolean deleteIngredientMappingByRawName(String rawName) {
+        String key = IngredientNameNormalizer.normalize(rawName);
+        if (!StringUtils.hasText(key)) {
+            throw new IllegalArgumentException("rawName is empty after normalization");
+        }
+        return ingredientMappingRepository.findByRawName(key)
+                .map(entity -> {
+                    ingredientMappingRepository.delete(entity);
+                    ingredientSearchService.initCache();
+                    return true;
+                })
+                .orElse(false);
     }
 
     @Transactional(readOnly = true)
