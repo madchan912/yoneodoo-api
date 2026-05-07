@@ -1,34 +1,55 @@
 package com.yoneodoo.api.controller;
 
-import com.yoneodoo.api.dto.RecipeCreateRequest; // (다음 스텝에서 만들 DTO)
+import com.yoneodoo.api.dto.RecipeCreateRequest;
 import com.yoneodoo.api.entity.Recipe;
 import com.yoneodoo.api.repository.RecipeRepository;
-import com.yoneodoo.api.service.RecipeService; // (다음 스텝에서 만들 Service)
+import com.yoneodoo.api.service.RecipeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 레시피 데이터에 대한 HTTP API 진입점입니다.
+ * <p>
+ * <b>역할 분리</b><br>
+ * · {@link #getAllRecipes()}: 단순 조회는 리포지토리를 직접 호출(전체 목록이 필요한 화면/도구용).<br>
+ * · {@link #createRecipe(RecipeCreateRequest)}: 저장은 반드시 {@link RecipeService}를 거쳐
+ * 재료명 정리 같은 비즈니스 규칙이 적용되게 합니다.
+ * <p>
+ * <b>데이터가 들어오는 대표 경로</b><br>
+ * 크롤러(파이썬) → POST 본문(JSON) → 이 컨트롤러 → 서비스 → DB {@code recipes}.
+ */
 @RestController
 @RequestMapping("/api/v1/recipes")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class RecipeController {
 
+    /** 조회 전용으로 쓰는 레시피 저장소(필터 없이 전체). */
     private final RecipeRepository recipeRepository;
-    private final RecipeService recipeService; // 🚀 POST 저장을 담당할 서비스 추가
+    /** 레시피 저장 시 도메인 규칙을 적용하는 서비스. */
+    private final RecipeService recipeService;
 
-    // 기존 로직: 레시피 전체 조회 (GET /api/v1/recipes)
+    /**
+     * DB에 있는 레시피 엔티티를 모두 반환합니다.
+     * <p>
+     * 주의: 레시피 수가 많으면 응답 크기가 커질 수 있어, 운영에서는 페이징 도입이 권장됩니다.
+     */
     @GetMapping
     public List<Recipe> getAllRecipes() {
         return recipeRepository.findAll();
     }
 
-    // 🚀 추가된 로직: 파이썬 크롤러가 던진 새 레시피 저장 (POST /api/v1/recipes)
+    /**
+     * 외부 시스템이 새 레시피 한 건을 적재할 때 호출하는 API입니다.
+     * <p>
+     * 본문은 {@link RecipeCreateRequest} 형식이며, 서비스에서 재료명 정리 후 {@code recipes} 행으로 저장됩니다.
+     */
     @PostMapping
     public ResponseEntity<String> createRecipe(@RequestBody RecipeCreateRequest request) {
-        recipeService.saveRecipe(request); // 서비스에게 데이터 정제 및 저장을 맡김
+        recipeService.saveRecipe(request);
         return ResponseEntity.ok("레시피 저장 및 캐시 업데이트 완료!");
     }
 }

@@ -5,13 +5,18 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+/**
+ * 냉장고에 재료를 추가할 때 쓰는 요청 본문 DTO입니다.
+ * <p>
+ * {@code userId}: 어느 회원의 냉장고를 수정할지(현재는 클라이언트가 숫자로 보냄 — 추후 로그인 토큰으로 대체 가능).<br>
+ * {@code ingredients}: 추가할 재료 "이름" 문자열들의 목록(예: {@code ["계란","고추장"]}).
+ */
 @Getter
 @NoArgsConstructor
 public class FridgeAddRequest {
-    // 임시로 유저 ID를 받습니다. (나중에 로그인 기능이 생기면 토큰에서 빼서 쓸 예정!)
+    /** 대상 회원의 PK. */
     private Long userId;
 
-    // 🚀 [수정됨] 기존 List<Long> ingredientIds 에서 변경!
-    // 추가할 재료들의 '이름' 목록 (예: ["계란", "고추장", "다진마늘"])
+    /** 한 번에 여러 재료를 넣을 수 있는 이름 배열. */
     private List<String> ingredients;
 }
