@@ -42,3 +42,6 @@ scripts/*.dump
 scripts/.tmp/
 backup.dump
 backup.sql
+
+### Spring Boot local profile (secrets) ###
+application-local.yaml
