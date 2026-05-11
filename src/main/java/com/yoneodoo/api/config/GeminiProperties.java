@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * application.yaml 에서 {@code gemini.*} 키로 주입됩니다.
  * <ul>
  *   <li>{@code gemini.api-key} — Google AI Studio 에서 발급한 API 키 (로컬 시크릿 파일에서만 관리, Git 커밋 금지)</li>
- *   <li>{@code gemini.model} — 호출할 모델 ID. 기본값 {@code gemini-1.5-flash}</li>
+ *   <li>{@code gemini.model} — 호출할 모델 ID. 기본값 {@code gemini-2.5-flash}</li>
  *   <li>{@code gemini.base-url} — Generative Language API 베이스 URL. 기본값은 공식 엔드포인트.</li>
  *   <li>{@code gemini.timeout-ms} — HTTP 응답 대기 한도(ms). 기본 15초.</li>
  * </ul>
@@ -25,7 +25,7 @@ public record GeminiProperties(
 ) {
     public GeminiProperties {
         if (model == null || model.isBlank()) {
-            model = "gemini-1.5-flash";
+            model = "gemini-2.5-flash";
         }
         if (baseUrl == null || baseUrl.isBlank()) {
             baseUrl = "https://generativelanguage.googleapis.com/v1beta";

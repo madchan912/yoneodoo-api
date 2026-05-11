@@ -10,7 +10,7 @@ import java.util.List;
  *
  * @param suggestion  Gemini 가 추천한 마스터 재료명(한 단어, 공백 제거됨)
  * @param rawNames    어떤 원본 재료들을 묶었는지 다시 보내주는 에코(프런트 UI 표시용)
- * @param model       응답에 사용된 모델 ID(예: gemini-1.5-flash) — 감사/디버깅용
+ * @param model       응답에 사용된 모델 ID(예: gemini-2.5-flash) — 감사/디버깅용
  */
 public record IngredientSuggestionResponse(
         String suggestion,

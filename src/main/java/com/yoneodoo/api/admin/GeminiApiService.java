@@ -18,7 +18,7 @@ import java.util.Map;
 /**
  * Google Generative Language API(Gemini)로의 공통 HTTP 호출입니다.
  * <p>
- * 모델 엔드포인트는 {@code gemini-1.5-flash} 전체 URL을 한 곳에서만 관리합니다.
+ * 모델 엔드포인트는 {@code gemini-2.5-flash} 전체 URL을 한 곳에서만 관리합니다.
  * <p>
  * <b>주의 — URL 인코딩</b><br>
  * Gemini 경로의 {@code :generateContent} 콜론은 RFC상 path 에서 허용되지만, Spring 의
@@ -35,7 +35,7 @@ public class GeminiApiService {
      * 실제 요청: {@code GENERATE_CONTENT_PATH}?key={apiKey}
      */
     public static final String GENERATE_CONTENT_PATH =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
     private final GeminiProperties props;
     private final RestClient geminiRestClient;
