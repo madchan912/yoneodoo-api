@@ -5,6 +5,7 @@ import com.yoneodoo.api.admin.dto.AdminRecipeDetailResponse;
 import com.yoneodoo.api.admin.dto.AdminRecipeRowResponse;
 import com.yoneodoo.api.admin.dto.AdminRecipeUpdateRequest;
 import com.yoneodoo.api.admin.dto.AdminTaskBoardResponse;
+import com.yoneodoo.api.admin.dto.IngredientBulkMapItem;
 import com.yoneodoo.api.admin.dto.IngredientMappingRowResponse;
 import com.yoneodoo.api.admin.dto.IngredientMappingSaveRequest;
 import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRowResponse;
@@ -323,6 +324,46 @@ public class AdminService {
             updated++;
         }
 
+        ingredientSearchService.initCache();
+        return updated;
+    }
+
+    /**
+     * 승인 모달에서 고른 다수의 (raw → master) 쌍을 한 번에 저장합니다.
+     * <p>
+     * 각 행은 {@link IngredientNameNormalizer} 로 정규화한 뒤 upsert 하며,
+     * 마지막에 검색 캐시를 한 번만 재빌드합니다.
+     *
+     * @param items {@code rawName}, {@code masterName} 목록
+     * @return 실제로 upsert 처리된 건수
+     */
+    @Transactional
+    public int bulkSaveIngredientMappings(List<IngredientBulkMapItem> items) {
+        if (items == null || items.isEmpty()) {
+            throw new IllegalArgumentException("items must not be empty");
+        }
+        int updated = 0;
+        for (IngredientBulkMapItem item : items) {
+            if (item == null) {
+                continue;
+            }
+            String raw = IngredientNameNormalizer.normalize(item.getRawName());
+            String master = IngredientNameNormalizer.normalize(item.getMasterName());
+            if (raw.isEmpty() || master.isEmpty()) {
+                continue;
+            }
+            ingredientMappingRepository.findByRawName(raw).ifPresentOrElse(
+                    existing -> {
+                        existing.setMasterName(master);
+                        ingredientMappingRepository.save(existing);
+                    },
+                    () -> ingredientMappingRepository.save(new IngredientMapping(raw, master))
+            );
+            updated++;
+        }
+        if (updated == 0) {
+            throw new IllegalArgumentException("no valid mapping entries after normalization");
+        }
         ingredientSearchService.initCache();
         return updated;
     }

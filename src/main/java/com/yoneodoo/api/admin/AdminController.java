@@ -5,6 +5,7 @@ import com.yoneodoo.api.admin.dto.AdminRecipeDetailResponse;
 import com.yoneodoo.api.admin.dto.AdminRecipeRowResponse;
 import com.yoneodoo.api.admin.dto.AdminRecipeUpdateRequest;
 import com.yoneodoo.api.admin.dto.AdminTaskBoardResponse;
+import com.yoneodoo.api.admin.dto.IngredientBulkMapRequest;
 import com.yoneodoo.api.admin.dto.IngredientMappingRowResponse;
 import com.yoneodoo.api.admin.dto.IngredientMappingSaveRequest;
 import com.yoneodoo.api.admin.dto.IngredientSuggestionRequest;
@@ -46,6 +47,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final IngredientSuggestionService ingredientSuggestionService;
+    private final IngredientBulkGroupingService ingredientBulkGroupingService;
 
     /** 대시보드 숫자 카드용 집계(레시피 건수·미분류 재료 수 등). */
     @GetMapping("/dashboard/stats")
@@ -171,5 +173,27 @@ public class AdminController {
     @PostMapping("/ingredients/suggest")
     public IngredientSuggestionResponse suggestIngredientMapping(@RequestBody IngredientSuggestionRequest body) {
         return ingredientSuggestionService.suggest(body == null ? null : body.getRawNames());
+    }
+
+    /**
+     * DB 상 매핑되지 않은 모든 미분류 재료명을 Gemini 에게 보내 마스터 기준 그룹(JSON 객체)을 받습니다.
+     * DB 저장 없음 — 프런트 승인 모달 후 {@link #bulkMapIngredients(IngredientBulkMapRequest)} 로 확정합니다.
+     */
+    @PostMapping("/ingredients/bulk-suggest")
+    public Map<String, List<String>> bulkSuggestIngredientGroups() {
+        return ingredientBulkGroupingService.suggestBulkGroupingForAllUnclassified();
+    }
+
+    /**
+     * 승인된 (rawName, masterName) 쌍만 일괄 저장합니다. 완료 후 검색 캐시를 재빌드합니다.
+     */
+    @PostMapping("/ingredients/bulk-map")
+    public Map<String, Object> bulkMapIngredients(@RequestBody IngredientBulkMapRequest body) {
+        try {
+            int updated = adminService.bulkSaveIngredientMappings(body == null ? null : body.getItems());
+            return Map.of("updated", updated);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 }
