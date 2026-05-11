@@ -71,9 +71,21 @@ public class Recipe {
      * 크롤링·자막 처리 등 파이프라인 단계를 나타내는 문자열 코드.
      * 예: 성공({@code SUCCESS}), 자막 없음({@code NO_SUBTITLES}), 대기/미정(null 또는 기타) 등.
      * 어드민 대시보드에서 건수 집계에 사용됩니다.
+     * <p>
+     * 사용자 노출 여부와는 무관합니다. 노출 토글은 {@link #displayStatus} 컬럼을 사용하세요.
      */
     @Column(length = 20)
     private String status;
+
+    /**
+     * 사용자 화면 노출 여부(Soft Delete).
+     * 신규 레코드는 {@link DisplayStatus#ACTIVE} 기본값으로 저장되며, 어드민이 {@link DisplayStatus#HIDDEN}으로 토글하면
+     * 사용자용 API/검색 캐시에서 제외됩니다.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "display_status", nullable = false, length = 20,
+            columnDefinition = "varchar(20) NOT NULL DEFAULT 'ACTIVE'")
+    private DisplayStatus displayStatus = DisplayStatus.ACTIVE;
 
     /** 자막·스크립트 원문(긴 텍스트). 검색이나 요약 기능에 활용할 수 있는 원천 데이터입니다. */
     @Column(columnDefinition = "TEXT")

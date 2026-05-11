@@ -9,6 +9,7 @@ import com.yoneodoo.api.admin.dto.IngredientMappingRowResponse;
 import com.yoneodoo.api.admin.dto.IngredientMappingSaveRequest;
 import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRowResponse;
 import com.yoneodoo.api.dto.RecipeIngredientData;
+import com.yoneodoo.api.entity.DisplayStatus;
 import com.yoneodoo.api.entity.IngredientMapping;
 import com.yoneodoo.api.entity.Recipe;
 import com.yoneodoo.api.repository.IngredientMappingRepository;
@@ -131,7 +132,14 @@ public class AdminService {
                     List<RecipeIngredientData> normalized = normalizeIngredients(request.getIngredients());
                     recipe.setIngredients(normalized);
 
+                    // 표시 상태(Soft Delete) 변경 — null이면 기존 값 유지.
+                    DisplayStatus newDisplay = request.getDisplayStatus();
+                    if (newDisplay != null) {
+                        recipe.setDisplayStatus(newDisplay);
+                    }
+
                     Recipe saved = recipeRepository.save(recipe);
+                    // 노출/재료가 바뀌었을 수 있으므로 검색 캐시를 다시 빌드(ACTIVE 만 캐시 소스).
                     ingredientSearchService.initCache();
                     return toDetail(saved);
                 })
@@ -358,6 +366,7 @@ public class AdminService {
                 r.getId(),
                 r.getTitle(),
                 r.getStatus(),
+                r.getDisplayStatus() == null ? DisplayStatus.ACTIVE : r.getDisplayStatus(),
                 r.getVideoId(),
                 r.getYoutuberName(),
                 r.getCreatedAt()
@@ -370,6 +379,7 @@ public class AdminService {
                 r.getId(),
                 r.getTitle(),
                 r.getStatus(),
+                r.getDisplayStatus() == null ? DisplayStatus.ACTIVE : r.getDisplayStatus(),
                 r.getVideoId(),
                 r.getYoutubeUrl(),
                 r.getYoutuberName(),

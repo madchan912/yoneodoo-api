@@ -1,6 +1,7 @@
 package com.yoneodoo.api.controller;
 
 import com.yoneodoo.api.dto.RecipeCreateRequest;
+import com.yoneodoo.api.entity.DisplayStatus;
 import com.yoneodoo.api.entity.Recipe;
 import com.yoneodoo.api.repository.RecipeRepository;
 import com.yoneodoo.api.service.RecipeService;
@@ -33,13 +34,14 @@ public class RecipeController {
     private final RecipeService recipeService;
 
     /**
-     * DB에 있는 레시피 엔티티를 모두 반환합니다.
+     * 사용자에게 노출 가능한({@link DisplayStatus#ACTIVE}) 레시피만 반환합니다.
      * <p>
-     * 주의: 레시피 수가 많으면 응답 크기가 커질 수 있어, 운영에서는 페이징 도입이 권장됩니다.
+     * Soft Delete된 ({@code HIDDEN}) 레시피는 절대로 응답에 포함되지 않습니다.
+     * 어드민 화면이 전체를 보고 싶으면 {@code /api/v1/admin/recipes}를 사용해야 합니다.
      */
     @GetMapping
     public List<Recipe> getAllRecipes() {
-        return recipeRepository.findAll();
+        return recipeRepository.findByDisplayStatus(DisplayStatus.ACTIVE);
     }
 
     /**

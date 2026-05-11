@@ -1,5 +1,6 @@
 package com.yoneodoo.api.service;
 
+import com.yoneodoo.api.entity.DisplayStatus;
 import com.yoneodoo.api.entity.Recipe;
 import com.yoneodoo.api.repository.RecipeRepository;
 import com.yoneodoo.api.util.KoreanParserUtil;
@@ -52,8 +53,8 @@ public class IngredientSearchService {
      */
     @PostConstruct
     public void initCache() {
-        // ① DB에서 레시피 전체 로드(트래픽이 큰 작업이므로 자주 호출하면 안 되고, 배치성으로 호출하는 설계).
-        List<Recipe> allRecipes = recipeRepository.findAll();
+        // ① 사용자 노출(ACTIVE) 레시피만 캐시 소스로 사용. HIDDEN 레시피의 재료는 자동완성에서 제외.
+        List<Recipe> allRecipes = recipeRepository.findByDisplayStatus(DisplayStatus.ACTIVE);
 
         // ② 각 레시피의 JSON 재료에서 name만 뽑아, 공백 제거 후 중복 없는 집합(Set)으로 만듭니다.
         Set<String> uniqueNames = allRecipes.stream()
