@@ -27,4 +27,5 @@ yoneodoo:
 gemini:
   api-key: ${GEMINI_API_KEY:}
   model: gemini-2.5-flash
-  timeout-ms: 15000
+  connect-timeout-ms: 30000
+  read-timeout-ms: 180000
