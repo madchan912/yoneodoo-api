@@ -48,10 +48,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminService {
 
-    /** 자막 없음 상태 코드 — 레시피 파이프라인에서 자막이 없을 때 저장되는 값. */
-    private static final String STATUS_NO_SUBTITLES = "NO_SUBTITLES";
-    /** 처리 완료(정상 종료)에 가까운 상태 코드. */
-    private static final String STATUS_SUCCESS = "SUCCESS";
+    /** 자막 없음 상태 코드 — 도메인 상수는 {@link Recipe#STATUS_NO_SUBTITLES} 를 그대로 재사용. */
+    private static final String STATUS_NO_SUBTITLES = Recipe.STATUS_NO_SUBTITLES;
+    /** 처리 완료 상태 코드 — 도메인 상수는 {@link Recipe#STATUS_SUCCESS} 를 그대로 재사용. */
+    private static final String STATUS_SUCCESS = Recipe.STATUS_SUCCESS;
 
     /** 레시피 전체 조회·집계에 사용. */
     private final RecipeRepository recipeRepository;

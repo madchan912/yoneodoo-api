@@ -31,6 +31,16 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Recipe {
 
+    /**
+     * 파이프라인 상태 코드 모음(문자열 상수).
+     * <p>
+     * 사용자 노출 가드(이중 안전장치)에서 "정상 처리된 레시피만 노출"한다는 의미로 {@link #STATUS_SUCCESS} 를 사용합니다.
+     * 다른 코드(NO_SUBTITLES, SKIP 등)도 늘어나면 여기로 모아두면 됩니다.
+     */
+    public static final String STATUS_SUCCESS = "SUCCESS";
+    /** 자막 추출 실패로 노출에서 제외되는 상태 코드. */
+    public static final String STATUS_NO_SUBTITLES = "NO_SUBTITLES";
+
     /** DB에서 자동 증가하는 기본키. 다른 테이블이 이 레시피를 참조할 때 사용합니다. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

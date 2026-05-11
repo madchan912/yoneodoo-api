@@ -53,8 +53,11 @@ public class IngredientSearchService {
      */
     @PostConstruct
     public void initCache() {
-        // ① 사용자 노출(ACTIVE) 레시피만 캐시 소스로 사용. HIDDEN 레시피의 재료는 자동완성에서 제외.
-        List<Recipe> allRecipes = recipeRepository.findByDisplayStatus(DisplayStatus.ACTIVE);
+        // ① 사용자 노출 이중 안전장치: status="SUCCESS" + displayStatus=ACTIVE 인 레시피만 캐시 소스로 사용.
+        //    - 크롤링 실패(자막 없음 등) 행의 재료는 자동완성에서 제외
+        //    - 어드민이 HIDDEN 으로 토글한 레시피의 재료도 자동완성에서 제외
+        List<Recipe> allRecipes = recipeRepository.findByStatusAndDisplayStatus(
+                Recipe.STATUS_SUCCESS, DisplayStatus.ACTIVE);
 
         // ② 각 레시피의 JSON 재료에서 name만 뽑아, 공백 제거 후 중복 없는 집합(Set)으로 만듭니다.
         Set<String> uniqueNames = allRecipes.stream()

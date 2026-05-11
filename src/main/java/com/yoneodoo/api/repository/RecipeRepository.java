@@ -29,6 +29,14 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
     List<Recipe> findByDisplayStatus(DisplayStatus displayStatus);
 
     /**
+     * 사용자 노출 "이중 안전장치" 메서드.
+     * <p>
+     * 어드민 토글({@code displayStatus = ACTIVE})뿐 아니라 크롤링 파이프라인 결과({@code status = SUCCESS})도 함께 만족해야
+     * 사용자 화면(검색·목록)에 나가도록 보장합니다. 자막 추출 실패 등으로 잘못 적재된 행이 새 나가는 것을 막습니다.
+     */
+    List<Recipe> findByStatusAndDisplayStatus(String status, DisplayStatus displayStatus);
+
+    /**
      * 아직 "완료"나 "자막 없음" 등으로 확정되지 않은 레시피 건수.
      * <p>
      * 기획 관점: 크롤링·자막 파이프라인에서 처리 대기·실패·미분류에 가까운 상태를 하나의 숫자로 보고 싶을 때 사용합니다.
