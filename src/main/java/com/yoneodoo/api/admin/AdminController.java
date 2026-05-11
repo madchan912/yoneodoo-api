@@ -7,6 +7,8 @@ import com.yoneodoo.api.admin.dto.AdminRecipeUpdateRequest;
 import com.yoneodoo.api.admin.dto.AdminTaskBoardResponse;
 import com.yoneodoo.api.admin.dto.IngredientMappingRowResponse;
 import com.yoneodoo.api.admin.dto.IngredientMappingSaveRequest;
+import com.yoneodoo.api.admin.dto.IngredientSuggestionRequest;
+import com.yoneodoo.api.admin.dto.IngredientSuggestionResponse;
 import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRowResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -43,6 +45,7 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
+    private final IngredientSuggestionService ingredientSuggestionService;
 
     /** 대시보드 숫자 카드용 집계(레시피 건수·미분류 재료 수 등). */
     @GetMapping("/dashboard/stats")
@@ -151,5 +154,22 @@ public class AdminController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
+    }
+
+    /**
+     * Gemini API 를 호출해 선택된 원본 재료들에 대한 마스터 재료명 한 단어를 추천받습니다.
+     * <p>
+     * 응답은 즉시 DB 에 반영되지 않고(프런트의 입력창에 자동 입력되기만 함),
+     * 어드민이 [매핑 저장] 버튼을 눌러야 최종 저장됩니다(Human-in-the-Loop).
+     * <p>
+     * 실패 상태 코드 매핑:<br>
+     * · {@code 400} — rawNames 가 비어 있음<br>
+     * · {@code 502} — Gemini 4xx/5xx 응답 또는 응답 파싱 실패<br>
+     * · {@code 503} — API 키 미설정 (운영에서 환경변수 누락 등)<br>
+     * · {@code 504} — Gemini 호출 타임아웃/네트워크 오류
+     */
+    @PostMapping("/ingredients/suggest")
+    public IngredientSuggestionResponse suggestIngredientMapping(@RequestBody IngredientSuggestionRequest body) {
+        return ingredientSuggestionService.suggest(body == null ? null : body.getRawNames());
     }
 }

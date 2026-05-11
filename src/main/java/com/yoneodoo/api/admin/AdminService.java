@@ -138,6 +138,12 @@ public class AdminService {
                         recipe.setDisplayStatus(newDisplay);
                     }
 
+                    // 크롤러 파이프라인 상태 코드 변경 — null/공백이면 기존 값 유지.
+                    // 자막 없음 등 실패 행을 어드민이 수동 보강한 뒤 SUCCESS 로 승급시키는 용도.
+                    if (StringUtils.hasText(request.getStatus())) {
+                        recipe.setStatus(request.getStatus().trim());
+                    }
+
                     Recipe saved = recipeRepository.save(recipe);
                     // 노출/재료가 바뀌었을 수 있으므로 검색 캐시를 다시 빌드(ACTIVE 만 캐시 소스).
                     ingredientSearchService.initCache();

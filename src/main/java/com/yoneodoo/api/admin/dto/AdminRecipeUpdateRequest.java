@@ -14,7 +14,9 @@ import java.util.List;
  * · {@code title} — 요리명(필수, 빈 문자열 금지)<br>
  * · {@code youtubeUrl} — 유튜브 영상 전체 URL (현재 UI에서는 읽기 전용이지만 API는 받음)<br>
  * · {@code ingredients} — 재료 배열. 각 원소는 이름·분량을 갖는 {@link RecipeIngredientData}.<br>
- * · {@code displayStatus} — 사용자 노출 상태(ACTIVE/HIDDEN). null이면 변경 없음.
+ * · {@code displayStatus} — 사용자 노출 상태(ACTIVE/HIDDEN). null이면 변경 없음.<br>
+ * · {@code status} — 크롤러 파이프라인 상태 코드(SUCCESS/NO_SUBTITLES 등). null/빈 문자열이면 기존 값 유지.
+ *   수동으로 자막을 보강했거나 재료를 채워 넣은 뒤 {@code SUCCESS} 로 승급시켜 사용자 노출 이중 가드를 통과시키는 용도.
  * <p>
  * 서버에서는 적재 시와 동일하게 각 재료 이름의 공백을 제거해
  * 검색 캐시·매핑 테이블 키와 규칙을 맞춥니다.
@@ -33,4 +35,7 @@ public class AdminRecipeUpdateRequest {
 
     /** 사용자 노출 상태(ACTIVE/HIDDEN). null이면 기존 값 유지. */
     private DisplayStatus displayStatus;
+
+    /** 파이프라인 상태 코드(SUCCESS/NO_SUBTITLES 등). null/빈 문자열이면 기존 값 유지. */
+    private String status;
 }
