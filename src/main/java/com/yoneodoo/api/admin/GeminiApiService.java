@@ -17,9 +17,7 @@ import java.util.Map;
 /**
  * Google Generative Language API(Gemini)로의 공통 HTTP 호출입니다.
  * <p>
- * 모델 엔드포인트는 {@code gemini-1.5-flash-latest} 고정 URL을 사용합니다.
- * 예전처럼 {@code /models/gemini-1.5-flash} 만 조합하면 404 가 나는 환경이 있어,
- * 공식 문서 형태의 전체 경로를 한 곳에서만 관리합니다.
+ * 모델 엔드포인트는 {@code gemini-1.5-flash} 전체 URL을 한 곳에서만 관리합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -31,7 +29,7 @@ public class GeminiApiService {
      * 실제 요청: {@code GENERATE_CONTENT_PATH}?key={apiKey}
      */
     public static final String GENERATE_CONTENT_PATH =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
     private final GeminiProperties props;
     private final RestClient geminiRestClient;

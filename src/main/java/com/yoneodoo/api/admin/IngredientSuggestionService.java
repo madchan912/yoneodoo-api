@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * "AI 매핑 추천" 도메인 서비스 — Google Gemini API 를 호출해 마스터 재료명 한 단어를 받아옵니다.
  * <p>
- * 실제 HTTP 호출은 {@link GeminiApiService} 가 고정 URL({@code gemini-1.5-flash-latest})로 수행합니다.
+ * 실제 HTTP 호출은 {@link GeminiApiService} 가 고정 URL({@code gemini-1.5-flash})로 수행합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -65,7 +65,7 @@ public class IngredientSuggestionService {
         if (suggestion == null || suggestion.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Gemini returned an empty suggestion");
         }
-        return new IngredientSuggestionResponse(suggestion, cleaned, "gemini-1.5-flash-latest");
+        return new IngredientSuggestionResponse(suggestion, cleaned, "gemini-1.5-flash");
     }
 
     private String buildPrompt(List<String> rawNames) {
