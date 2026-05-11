@@ -12,12 +12,18 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.net.URI;
 import java.util.Map;
 
 /**
  * Google Generative Language API(Gemini)로의 공통 HTTP 호출입니다.
  * <p>
  * 모델 엔드포인트는 {@code gemini-1.5-flash} 전체 URL을 한 곳에서만 관리합니다.
+ * <p>
+ * <b>주의 — URL 인코딩</b><br>
+ * Gemini 경로의 {@code :generateContent} 콜론은 RFC상 path 에서 허용되지만, Spring 의
+ * URL 템플릿(String 오버로드)을 거치면 {@code %3A} 로 인코딩되어 404 가 납니다.
+ * 그래서 호출 시 {@link URI#create(String)} 로 미리 {@link URI} 객체를 만들어 그대로 넘깁니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -44,7 +50,9 @@ public class GeminiApiService {
         if (!props.isConfigured()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Gemini API key is not configured");
         }
-        String uri = GENERATE_CONTENT_PATH + "?key=" + props.apiKey();
+        String url = GENERATE_CONTENT_PATH + "?key=" + props.apiKey();
+        // 콜론(:) 자동 인코딩 → 404 방지를 위해 URI 객체로 감싸 그대로 전달
+        URI uri = URI.create(url);
         try {
             return geminiRestClient.post()
                     .uri(uri)
