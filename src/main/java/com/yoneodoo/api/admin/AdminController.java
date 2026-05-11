@@ -1,7 +1,10 @@
 package com.yoneodoo.api.admin;
 
 import com.yoneodoo.api.admin.dto.AdminDashboardStatsResponse;
+import com.yoneodoo.api.admin.dto.AdminRecipeDetailResponse;
 import com.yoneodoo.api.admin.dto.AdminRecipeRowResponse;
+import com.yoneodoo.api.admin.dto.AdminRecipeUpdateRequest;
+import com.yoneodoo.api.admin.dto.AdminTaskBoardResponse;
 import com.yoneodoo.api.admin.dto.IngredientMappingRowResponse;
 import com.yoneodoo.api.admin.dto.IngredientMappingSaveRequest;
 import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRowResponse;
@@ -12,6 +15,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -55,6 +59,51 @@ public class AdminController {
             @RequestParam(name = "filter", defaultValue = "all") String filter
     ) {
         return adminService.listRecipesForAdmin(filter);
+    }
+
+    /**
+     * 레시피 한 건의 상세 정보(편집 화면 진입 시 사용).
+     */
+    @GetMapping("/recipes/{id}")
+    public AdminRecipeDetailResponse getRecipe(@PathVariable Long id) {
+        AdminRecipeDetailResponse detail = adminService.getRecipeDetail(id);
+        if (detail == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "recipe not found: " + id);
+        }
+        return detail;
+    }
+
+    /**
+     * 레시피 한 건의 요리명·유튜브 URL·재료 배열을 수정합니다.
+     * 성공 시 수정된 상세 DTO를 반환합니다.
+     */
+    @PutMapping("/recipes/{id}")
+    public AdminRecipeDetailResponse updateRecipe(
+            @PathVariable Long id,
+            @RequestBody AdminRecipeUpdateRequest body
+    ) {
+        try {
+            AdminRecipeDetailResponse updated = adminService.updateRecipe(id, body);
+            if (updated == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "recipe not found: " + id);
+            }
+            return updated;
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    /**
+     * 어드민 "로드맵" 화면용 — 프로젝트 루트의 {@code TASK.md} 원문을 읽어 그대로 돌려줍니다.
+     * 파일이 없으면 404. 파일은 마크다운이며, 프런트엔드에서 렌더링합니다.
+     */
+    @GetMapping("/tasks")
+    public AdminTaskBoardResponse getTaskBoard() {
+        AdminTaskBoardResponse res = adminService.readTaskMarkdown();
+        if (res == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "TASK.md not found");
+        }
+        return res;
     }
 
     /**
