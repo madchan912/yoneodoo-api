@@ -1,9 +1,15 @@
 package com.yoneodoo.api.admin;
 
 import com.yoneodoo.api.admin.dto.AdminDashboardStatsResponse;
+import com.yoneodoo.api.admin.dto.AdminRecipeDetailResponse;
 import com.yoneodoo.api.admin.dto.AdminRecipeRowResponse;
+import com.yoneodoo.api.admin.dto.AdminRecipeUpdateRequest;
+import com.yoneodoo.api.admin.dto.AdminTaskBoardResponse;
+import com.yoneodoo.api.admin.dto.IngredientBulkMapRequest;
 import com.yoneodoo.api.admin.dto.IngredientMappingRowResponse;
 import com.yoneodoo.api.admin.dto.IngredientMappingSaveRequest;
+import com.yoneodoo.api.admin.dto.IngredientSuggestionRequest;
+import com.yoneodoo.api.admin.dto.IngredientSuggestionResponse;
 import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRowResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -12,6 +18,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -39,6 +46,8 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
+    private final IngredientSuggestionService ingredientSuggestionService;
+    private final IngredientBulkGroupingService ingredientBulkGroupingService;
 
     /** 대시보드 숫자 카드용 집계(레시피 건수·미분류 재료 수 등). */
     @GetMapping("/dashboard/stats")
@@ -55,6 +64,51 @@ public class AdminController {
             @RequestParam(name = "filter", defaultValue = "all") String filter
     ) {
         return adminService.listRecipesForAdmin(filter);
+    }
+
+    /**
+     * 레시피 한 건의 상세 정보(편집 화면 진입 시 사용).
+     */
+    @GetMapping("/recipes/{id}")
+    public AdminRecipeDetailResponse getRecipe(@PathVariable Long id) {
+        AdminRecipeDetailResponse detail = adminService.getRecipeDetail(id);
+        if (detail == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "recipe not found: " + id);
+        }
+        return detail;
+    }
+
+    /**
+     * 레시피 한 건의 요리명·유튜브 URL·재료 배열을 수정합니다.
+     * 성공 시 수정된 상세 DTO를 반환합니다.
+     */
+    @PutMapping("/recipes/{id}")
+    public AdminRecipeDetailResponse updateRecipe(
+            @PathVariable Long id,
+            @RequestBody AdminRecipeUpdateRequest body
+    ) {
+        try {
+            AdminRecipeDetailResponse updated = adminService.updateRecipe(id, body);
+            if (updated == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "recipe not found: " + id);
+            }
+            return updated;
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    /**
+     * 어드민 "로드맵" 화면용 — 프로젝트 루트의 {@code TASK.md} 원문을 읽어 그대로 돌려줍니다.
+     * 파일이 없으면 404. 파일은 마크다운이며, 프런트엔드에서 렌더링합니다.
+     */
+    @GetMapping("/tasks")
+    public AdminTaskBoardResponse getTaskBoard() {
+        AdminTaskBoardResponse res = adminService.readTaskMarkdown();
+        if (res == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "TASK.md not found");
+        }
+        return res;
     }
 
     /**
@@ -98,6 +152,45 @@ public class AdminController {
     public Map<String, Object> saveIngredientMapping(@RequestBody IngredientMappingSaveRequest body) {
         try {
             int updated = adminService.saveIngredientMappings(body);
+            return Map.of("updated", updated);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    /**
+     * Gemini API 를 호출해 선택된 원본 재료들에 대한 마스터 재료명 한 단어를 추천받습니다.
+     * <p>
+     * 응답은 즉시 DB 에 반영되지 않고(프런트의 입력창에 자동 입력되기만 함),
+     * 어드민이 [매핑 저장] 버튼을 눌러야 최종 저장됩니다(Human-in-the-Loop).
+     * <p>
+     * 실패 상태 코드 매핑:<br>
+     * · {@code 400} — rawNames 가 비어 있음<br>
+     * · {@code 502} — Gemini 4xx/5xx 응답 또는 응답 파싱 실패<br>
+     * · {@code 503} — API 키 미설정 (운영에서 환경변수 누락 등)<br>
+     * · {@code 504} — Gemini 호출 타임아웃/네트워크 오류
+     */
+    @PostMapping("/ingredients/suggest")
+    public IngredientSuggestionResponse suggestIngredientMapping(@RequestBody IngredientSuggestionRequest body) {
+        return ingredientSuggestionService.suggest(body == null ? null : body.getRawNames());
+    }
+
+    /**
+     * DB 상 매핑되지 않은 모든 미분류 재료명을 Gemini 에게 보내 마스터 기준 그룹(JSON 객체)을 받습니다.
+     * DB 저장 없음 — 프런트 승인 모달 후 {@link #bulkMapIngredients(IngredientBulkMapRequest)} 로 확정합니다.
+     */
+    @PostMapping("/ingredients/bulk-suggest")
+    public Map<String, List<String>> bulkSuggestIngredientGroups() {
+        return ingredientBulkGroupingService.suggestBulkGroupingForAllUnclassified();
+    }
+
+    /**
+     * 승인된 (rawName, masterName) 쌍만 일괄 저장합니다. 완료 후 검색 캐시를 재빌드합니다.
+     */
+    @PostMapping("/ingredients/bulk-map")
+    public Map<String, Object> bulkMapIngredients(@RequestBody IngredientBulkMapRequest body) {
+        try {
+            int updated = adminService.bulkSaveIngredientMappings(body == null ? null : body.getItems());
             return Map.of("updated", updated);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());

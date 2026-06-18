@@ -1,6 +1,7 @@
 package com.yoneodoo.api.controller;
 
 import com.yoneodoo.api.dto.RecipeCreateRequest;
+import com.yoneodoo.api.entity.DisplayStatus;
 import com.yoneodoo.api.entity.Recipe;
 import com.yoneodoo.api.repository.RecipeRepository;
 import com.yoneodoo.api.service.RecipeService;
@@ -33,13 +34,18 @@ public class RecipeController {
     private final RecipeService recipeService;
 
     /**
-     * DB에 있는 레시피 엔티티를 모두 반환합니다.
+     * 사용자에게 노출 가능한 레시피만 반환합니다(이중 안전장치).
      * <p>
-     * 주의: 레시피 수가 많으면 응답 크기가 커질 수 있어, 운영에서는 페이징 도입이 권장됩니다.
+     * <b>두 조건을 모두 만족하는 레시피만</b> 응답합니다:<br>
+     * · 파이프라인 처리 성공: {@code status = "SUCCESS"} — 자막 없음/스킵 등 비정상 적재 차단<br>
+     * · 어드민 노출 허용: {@code displayStatus = ACTIVE} — Soft Delete 된 행 차단
+     * <p>
+     * 둘 중 하나라도 어긋나면 사용자 화면에서 보이지 않습니다.
+     * 어드민 전체 목록은 {@code /api/v1/admin/recipes}를 사용해야 합니다.
      */
     @GetMapping
     public List<Recipe> getAllRecipes() {
-        return recipeRepository.findAll();
+        return recipeRepository.findByStatusAndDisplayStatus(Recipe.STATUS_SUCCESS, DisplayStatus.ACTIVE);
     }
 
     /**

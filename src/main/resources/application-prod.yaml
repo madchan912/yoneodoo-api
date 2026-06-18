@@ -22,3 +22,10 @@ logging:
 yoneodoo:
   admin:
     secret: ${ADMIN_SECRET:}
+
+# 🤖 Gemini API — 운영에서는 GEMINI_API_KEY 환경변수로만 주입. 미설정 시 AI 추천 API 는 503 응답.
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: gemini-2.5-flash
+  connect-timeout-ms: 30000
+  read-timeout-ms: 180000
