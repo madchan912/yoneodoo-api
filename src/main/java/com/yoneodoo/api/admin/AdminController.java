@@ -10,6 +10,7 @@ import com.yoneodoo.api.admin.dto.IngredientMappingRowResponse;
 import com.yoneodoo.api.admin.dto.IngredientMappingSaveRequest;
 import com.yoneodoo.api.admin.dto.IngredientSuggestionRequest;
 import com.yoneodoo.api.admin.dto.IngredientSuggestionResponse;
+import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRecipeResponse;
 import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRowResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -118,6 +119,24 @@ public class AdminController {
     @GetMapping("/ingredients/unclassified")
     public List<UnclassifiedIngredientRowResponse> unclassifiedIngredients() {
         return adminService.listUnclassifiedIngredients();
+    }
+
+    /**
+     * 특정 미분류 재료명이 포함된 레시피 목록을 반환합니다.
+     * <p>
+     * 어드민이 rawName 을 마스터로 묶기 전에 "이 재료가 실제 어느 레시피에 쓰이는지" 확인하는 용도입니다.
+     * rawName 은 서비스 내부에서 {@link com.yoneodoo.api.admin.IngredientNameNormalizer}로 정규화됩니다.
+     *
+     * @param rawName URL 경로로 전달된 원본 재료 표기 (URL 디코딩 후 전달)
+     * @return 해당 재료가 포함된 레시피 요약 목록 (생성일 최신순)
+     */
+    @GetMapping("/ingredients/unclassified/{rawName}/recipes")
+    public List<UnclassifiedIngredientRecipeResponse> listRecipesByRawName(@PathVariable String rawName) {
+        try {
+            return adminService.listRecipesByRawName(rawName);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     /** 매핑 테이블에 이미 있는 전체 행을 최신 등록순으로 반환합니다. */

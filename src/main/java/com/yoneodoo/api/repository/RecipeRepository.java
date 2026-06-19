@@ -4,6 +4,7 @@ import com.yoneodoo.api.entity.DisplayStatus;
 import com.yoneodoo.api.entity.Recipe;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -59,4 +60,27 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
             ORDER BY r.createdAt DESC
             """)
     List<Recipe> findPendingForAdmin();
+
+    /**
+     * 특정 재료명(rawName)이 {@code ingredients} JSONB 배열 안에 있는 레시피 목록을 반환합니다.
+     * <p>
+     * 기획 관점: 어드민이 미분류 재료를 정규화하기 전에 "이 재료가 실제로 어느 레시피에 쓰이는지"
+     * 확인하는 용도입니다. {@code jsonb_array_elements}로 배열을 풀어 {@code name} 키 값과 정확 일치 비교합니다.
+     * <p>
+     * 주의: rawName 은 호출 전에 {@link com.yoneodoo.api.admin.IngredientNameNormalizer}로 정규화해야
+     * DB에 저장된 키와 일치합니다.
+     *
+     * @param rawName 정규화된 재료명 (공백 제거 등 적용된 상태)
+     * @return 해당 재료가 포함된 레시피 목록 (생성일 최신순)
+     */
+    @Query(value = """
+            SELECT r.* FROM recipes r
+            WHERE r.ingredients IS NOT NULL
+              AND EXISTS (
+                SELECT 1 FROM jsonb_array_elements(r.ingredients) AS elem
+                WHERE elem->>'name' = :rawName
+              )
+            ORDER BY r.created_at DESC
+            """, nativeQuery = true)
+    List<Recipe> findByIngredientRawName(@Param("rawName") String rawName);
 }
