@@ -8,6 +8,7 @@ import com.yoneodoo.api.admin.dto.AdminTaskBoardResponse;
 import com.yoneodoo.api.admin.dto.IngredientBulkMapItem;
 import com.yoneodoo.api.admin.dto.IngredientMappingRowResponse;
 import com.yoneodoo.api.admin.dto.IngredientMappingSaveRequest;
+import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRecipeResponse;
 import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRowResponse;
 import com.yoneodoo.api.dto.RecipeIngredientData;
 import com.yoneodoo.api.entity.DisplayStatus;
@@ -209,6 +210,39 @@ public class AdminService {
             default -> recipeRepository.findAll();
         };
         return rows.stream().map(this::toRow).toList();
+    }
+
+    /**
+     * 특정 미분류 재료명이 포함된 레시피 목록을 반환합니다.
+     * <p>
+     * 처리 단계:<br>
+     * ① 입력 rawName 을 {@link IngredientNameNormalizer}로 정규화 — DB에 저장된 키와 동일한 규칙.<br>
+     * ② 정규화 결과가 비어 있으면 {@code IllegalArgumentException}(컨트롤러에서 400 매핑).<br>
+     * ③ {@link com.yoneodoo.api.repository.RecipeRepository#findByIngredientRawName}으로
+     *    {@code ingredients} JSONB 배열 안에 해당 이름이 있는 레시피만 선별.<br>
+     * ④ 결과를 {@link UnclassifiedIngredientRecipeResponse}로 변환해 반환.
+     * <p>
+     * 용도: 어드민이 미분류 재료를 마스터로 묶기 전에 "이 재료가 실제 어느 레시피에 쓰이는지" 확인하는 뷰.
+     *
+     * @param rawName URL 경로로 들어온 원본 재료 표기 (내부에서 정규화)
+     * @return 해당 재료가 포함된 레시피 요약 목록
+     */
+    @Transactional(readOnly = true)
+    public List<UnclassifiedIngredientRecipeResponse> listRecipesByRawName(String rawName) {
+        String normalized = IngredientNameNormalizer.normalize(rawName);
+        if (!StringUtils.hasText(normalized)) {
+            throw new IllegalArgumentException("rawName is empty after normalization");
+        }
+        return recipeRepository.findByIngredientRawName(normalized).stream()
+                .map(r -> new UnclassifiedIngredientRecipeResponse(
+                        r.getId(),
+                        r.getTitle(),
+                        r.getYoutuberName(),
+                        r.getVideoId(),
+                        r.getStatus(),
+                        r.getDisplayStatus() == null ? DisplayStatus.ACTIVE : r.getDisplayStatus()
+                ))
+                .toList();
     }
 
     /**
