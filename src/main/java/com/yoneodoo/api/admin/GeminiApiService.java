@@ -46,8 +46,7 @@ public class GeminiApiService {
 
     private final GeminiProperties props;
     private final RestClient geminiRestClient;
-    /** Spring Boot auto-configure 된 ObjectMapper 빈 — readTree() 경로를 통해 JsonNode 를 안전하게 파싱합니다. */
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Gemini {@code generateContent} 한 번 호출하고 원본 JSON 응답 트리를 돌려줍니다.

@@ -25,8 +25,7 @@ public class IngredientSuggestionService {
 
     private final GeminiProperties props;
     private final GeminiApiService geminiApiService;
-    /** Spring Boot auto-configure 된 ObjectMapper 빈 — GeminiApiService 와 동일한 인스턴스를 공유합니다. */
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Gemini 호출 진입점. 추천 마스터 재료명을 만들어 돌려줍니다.
