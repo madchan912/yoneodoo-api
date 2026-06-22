@@ -1,9 +1,11 @@
 package com.yoneodoo.api.controller;
 
 import com.yoneodoo.api.dto.RecipeCreateRequest;
+import com.yoneodoo.api.dto.RecipeIngredientData;
 import com.yoneodoo.api.entity.DisplayStatus;
 import com.yoneodoo.api.entity.Recipe;
 import com.yoneodoo.api.repository.RecipeRepository;
+import com.yoneodoo.api.service.IngredientSearchService;
 import com.yoneodoo.api.service.RecipeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +34,8 @@ public class RecipeController {
     private final RecipeRepository recipeRepository;
     /** 레시피 저장 시 도메인 규칙을 적용하는 서비스. */
     private final RecipeService recipeService;
+    /** raw 재료명 → master_name 변환에 사용하는 캐시 서비스. */
+    private final IngredientSearchService ingredientSearchService;
 
     /**
      * 사용자에게 노출 가능한 레시피만 반환합니다(이중 안전장치).
@@ -45,7 +49,9 @@ public class RecipeController {
      */
     @GetMapping
     public List<Recipe> getAllRecipes() {
-        return recipeRepository.findByStatusAndDisplayStatus(Recipe.STATUS_SUCCESS, DisplayStatus.ACTIVE);
+        List<Recipe> recipes = recipeRepository.findByStatusAndDisplayStatus(Recipe.STATUS_SUCCESS, DisplayStatus.ACTIVE);
+        applyMasterNames(recipes);
+        return recipes;
     }
 
     /**
@@ -63,7 +69,25 @@ public class RecipeController {
         if (q.isBlank()) {
             return List.of();
         }
-        return recipeRepository.searchByTitle(q);
+        List<Recipe> recipes = recipeRepository.searchByTitle(q);
+        applyMasterNames(recipes);
+        return recipes;
+    }
+
+    /**
+     * 레시피 목록의 각 재료명을 master_name으로 변환합니다(in-place).
+     * <p>
+     * 컨트롤러에서 JPA 트랜잭션 종료 후(=detached 상태) 호출되므로 DB에 반영되지 않습니다.<br>
+     * {@code ingredient_mapping}에 등록된 raw_name은 master_name으로 교체되고,
+     * 미등록 raw_name은 원본 그대로 유지됩니다.
+     */
+    private void applyMasterNames(List<Recipe> recipes) {
+        for (Recipe recipe : recipes) {
+            if (recipe.getIngredients() == null) continue;
+            for (RecipeIngredientData ing : recipe.getIngredients()) {
+                ing.setName(ingredientSearchService.toMaster(ing.getName()));
+            }
+        }
     }
 
     /**
