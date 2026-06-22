@@ -49,6 +49,24 @@ public class RecipeController {
     }
 
     /**
+     * 요리명 키워드로 레시피를 검색합니다 (사용자용 요리명 검색 모드).
+     * <p>
+     * ① {@code q}가 비어 있으면 빈 목록을 즉시 반환합니다.<br>
+     * ② 키워드를 리포지토리에 전달해 ILIKE 검색 결과를 반환합니다.
+     * 노출 안전장치(status/displayStatus)는 쿼리 안에서 적용됩니다.
+     *
+     * @param q 사용자 입력 요리명 검색어
+     * @return 제목에 키워드가 포함된 레시피 목록
+     */
+    @GetMapping("/search")
+    public List<Recipe> searchRecipes(@RequestParam(defaultValue = "") String q) {
+        if (q.isBlank()) {
+            return List.of();
+        }
+        return recipeRepository.searchByTitle(q);
+    }
+
+    /**
      * 외부 시스템이 새 레시피 한 건을 적재할 때 호출하는 API입니다.
      * <p>
      * 본문은 {@link RecipeCreateRequest} 형식이며, 서비스에서 재료명 정리 후 {@code recipes} 행으로 저장됩니다.
