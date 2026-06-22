@@ -1,6 +1,7 @@
 package com.yoneodoo.api.admin;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yoneodoo.api.config.GeminiProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,12 @@ import java.util.Map;
  * Gemini 경로의 {@code :generateContent} 콜론은 RFC상 path 에서 허용되지만, Spring 의
  * URL 템플릿(String 오버로드)을 거치면 {@code %3A} 로 인코딩되어 404 가 납니다.
  * 그래서 호출 시 {@link URI#create(String)} 로 미리 {@link URI} 객체를 만들어 그대로 넘깁니다.
+ * <p>
+ * <b>주의 — JsonNode 역직렬화</b><br>
+ * {@code RestClient.retrieve().body(JsonNode.class)} 는 내부적으로
+ * {@code objectMapper.readValue(inputStream, JsonNode.class)} 를 호출하는데,
+ * {@code JsonNode} 가 추상 클래스라 Jackson 의 일반 타입 해석 경로에서 실패합니다.
+ * 대신 응답을 {@code String} 으로 받은 뒤 {@code objectMapper.readTree()} 로 파싱합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,12 +46,17 @@ public class GeminiApiService {
 
     private final GeminiProperties props;
     private final RestClient geminiRestClient;
+    /** Spring Boot auto-configure 된 ObjectMapper 빈 — readTree() 경로를 통해 JsonNode 를 안전하게 파싱합니다. */
+    private final ObjectMapper objectMapper;
 
     /**
      * Gemini {@code generateContent} 한 번 호출하고 원본 JSON 응답 트리를 돌려줍니다.
+     * <p>
+     * ① 응답을 {@code String} 으로 수신 — {@code StringHttpMessageConverter} 가 처리하므로 타입 오류 없음.<br>
+     * ② {@code objectMapper.readTree(responseBody)} 로 파싱 — Jackson 의 추상 타입 처리 경로를 올바르게 사용.<br>
      *
      * @param body 요청 본문({@code contents}, {@code generationConfig} 등)
-     * @throws ResponseStatusException 키 미설정(503), Gemini 오류(502), 타임아웃(504)
+     * @throws ResponseStatusException 키 미설정(503), 빈 응답(502), Gemini 오류(502), 타임아웃(504)
      */
     public JsonNode generateContent(Map<String, Object> body) {
         if (!props.isConfigured()) {
@@ -54,12 +66,23 @@ public class GeminiApiService {
         // 콜론(:) 자동 인코딩 → 404 방지를 위해 URI 객체로 감싸 그대로 전달
         URI uri = URI.create(url);
         try {
-            return geminiRestClient.post()
+            // ① String 으로 받아 추상 타입 역직렬화 오류 회피
+            String responseBody = geminiRestClient.post()
                     .uri(uri)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
-                    .body(JsonNode.class);
+                    .body(String.class);
+
+            if (responseBody == null || responseBody.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Gemini returned empty response body");
+            }
+
+            // ② readTree() 로 JsonNode 파싱 — JsonNode 추상 클래스를 안전하게 처리하는 Jackson 전용 경로
+            return objectMapper.readTree(responseBody);
+
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (HttpStatusCodeException e) {
             log.warn("Gemini HTTP {} body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
@@ -67,6 +90,9 @@ public class GeminiApiService {
         } catch (ResourceAccessException e) {
             log.warn("Gemini timeout/network error", e);
             throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Gemini call timed out");
+        } catch (Exception e) {
+            log.warn("Failed to parse Gemini response as JSON", e);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to parse Gemini response as JSON");
         }
     }
 }
