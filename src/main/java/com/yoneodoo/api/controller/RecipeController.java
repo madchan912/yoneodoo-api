@@ -2,6 +2,7 @@ package com.yoneodoo.api.controller;
 
 import com.yoneodoo.api.dto.RecipeCreateRequest;
 import com.yoneodoo.api.dto.RecipeIngredientData;
+import com.yoneodoo.api.dto.RecipeResponse;
 import com.yoneodoo.api.entity.DisplayStatus;
 import com.yoneodoo.api.entity.Recipe;
 import com.yoneodoo.api.repository.RecipeRepository;
@@ -9,28 +10,32 @@ import com.yoneodoo.api.service.IngredientSearchService;
 import com.yoneodoo.api.service.RecipeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 레시피 데이터에 대한 HTTP API 진입점입니다.
  * <p>
  * <b>역할 분리</b><br>
- * · {@link #getAllRecipes()}: 단순 조회는 리포지토리를 직접 호출(전체 목록이 필요한 화면/도구용).<br>
+ * · {@link #getAllRecipes()}: 조회는 리포지토리를 직접 호출 후 {@link RecipeResponse}로 변환.<br>
  * · {@link #createRecipe(RecipeCreateRequest)}: 저장은 반드시 {@link RecipeService}를 거쳐
  * 재료명 정리 같은 비즈니스 규칙이 적용되게 합니다.
  * <p>
- * <b>데이터가 들어오는 대표 경로</b><br>
- * 크롤러(파이썬) → POST 본문(JSON) → 이 컨트롤러 → 서비스 → DB {@code recipes}.
+ * CORS 정책은 {@link com.yoneodoo.api.config.CorsConfig}에서 일괄 관리합니다.
  */
 @RestController
 @RequestMapping("/api/v1/recipes")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class RecipeController {
 
-    /** 조회 전용으로 쓰는 레시피 저장소(필터 없이 전체). */
+    /** 조회 전용으로 쓰는 레시피 저장소. */
     private final RecipeRepository recipeRepository;
     /** 레시피 저장 시 도메인 규칙을 적용하는 서비스. */
     private final RecipeService recipeService;
@@ -41,53 +46,54 @@ public class RecipeController {
      * 사용자에게 노출 가능한 레시피만 반환합니다(이중 안전장치).
      * <p>
      * <b>두 조건을 모두 만족하는 레시피만</b> 응답합니다:<br>
-     * · 파이프라인 처리 성공: {@code status = "SUCCESS"} — 자막 없음/스킵 등 비정상 적재 차단<br>
-     * · 어드민 노출 허용: {@code displayStatus = ACTIVE} — Soft Delete 된 행 차단
+     * · 파이프라인 처리 성공: {@code status = "SUCCESS"}<br>
+     * · 어드민 노출 허용: {@code displayStatus = ACTIVE}
      * <p>
-     * 둘 중 하나라도 어긋나면 사용자 화면에서 보이지 않습니다.
-     * 어드민 전체 목록은 {@code /api/v1/admin/recipes}를 사용해야 합니다.
+     * 응답 DTO({@link RecipeResponse})에는 내부 파이프라인 필드({@code status}, {@code displayStatus},
+     * {@code transcript})가 포함되지 않습니다.
      */
     @GetMapping
-    public List<Recipe> getAllRecipes() {
+    public List<RecipeResponse> getAllRecipes() {
         List<Recipe> recipes = recipeRepository.findByStatusAndDisplayStatus(Recipe.STATUS_SUCCESS, DisplayStatus.ACTIVE);
-        applyMasterNames(recipes);
-        return recipes;
+        return toResponse(recipes);
     }
 
     /**
      * 요리명 키워드로 레시피를 검색합니다 (사용자용 요리명 검색 모드).
      * <p>
      * ① {@code q}가 비어 있으면 빈 목록을 즉시 반환합니다.<br>
-     * ② 키워드를 리포지토리에 전달해 ILIKE 검색 결과를 반환합니다.
-     * 노출 안전장치(status/displayStatus)는 쿼리 안에서 적용됩니다.
+     * ② 키워드를 리포지토리에 전달해 ILIKE 검색 결과를 {@link RecipeResponse}로 변환 후 반환합니다.
      *
      * @param q 사용자 입력 요리명 검색어
      * @return 제목에 키워드가 포함된 레시피 목록
      */
     @GetMapping("/search")
-    public List<Recipe> searchRecipes(@RequestParam(defaultValue = "") String q) {
+    public List<RecipeResponse> searchRecipes(@RequestParam(defaultValue = "") String q) {
         if (q.isBlank()) {
             return List.of();
         }
-        List<Recipe> recipes = recipeRepository.searchByTitle(q);
-        applyMasterNames(recipes);
-        return recipes;
+        return toResponse(recipeRepository.searchByTitle(q));
     }
 
     /**
-     * 레시피 목록의 각 재료명을 master_name으로 변환합니다(in-place).
+     * {@link Recipe} 엔티티 목록을 {@link RecipeResponse} DTO 목록으로 변환합니다.
      * <p>
-     * 컨트롤러에서 JPA 트랜잭션 종료 후(=detached 상태) 호출되므로 DB에 반영되지 않습니다.<br>
-     * {@code ingredient_mapping}에 등록된 raw_name은 master_name으로 교체되고,
-     * 미등록 raw_name은 원본 그대로 유지됩니다.
+     * 각 재료명은 {@link IngredientSearchService#toMaster(String)}으로 master_name으로 교체됩니다.
+     * 새 {@link RecipeIngredientData} 객체를 만들어 원본 엔티티를 건드리지 않습니다.
      */
-    private void applyMasterNames(List<Recipe> recipes) {
-        for (Recipe recipe : recipes) {
-            if (recipe.getIngredients() == null) continue;
-            for (RecipeIngredientData ing : recipe.getIngredients()) {
-                ing.setName(ingredientSearchService.toMaster(ing.getName()));
-            }
-        }
+    private List<RecipeResponse> toResponse(List<Recipe> recipes) {
+        return recipes.stream()
+                .map(recipe -> {
+                    List<RecipeIngredientData> masterIngredients = recipe.getIngredients() == null
+                            ? List.of()
+                            : recipe.getIngredients().stream()
+                                    .map(ing -> new RecipeIngredientData(
+                                            ingredientSearchService.toMaster(ing.getName()),
+                                            ing.getAmount()))
+                                    .collect(Collectors.toList());
+                    return RecipeResponse.from(recipe, masterIngredients);
+                })
+                .collect(Collectors.toList());
     }
 
     /**

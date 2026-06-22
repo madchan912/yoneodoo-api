@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-운영(Neon 등) PostgreSQL에서 pg_dump로 백업한 뒤, 로컬 Docker PostgreSQL에 pg_restore로 덮어쓴다.
+운영(RDS 등) PostgreSQL에서 pg_dump로 백업한 뒤, 로컬 Docker PostgreSQL에 pg_restore로 덮어쓴다.
 
 - 접속 정보는 환경 변수 또는 --env-file 로만 주입한다. (하드코딩 없음)
 - TARGET 호스트는 localhost 계열만 허용해, 실수로 운영 DB를 restore 대상으로 쓰는 것을 방지한다.
@@ -149,7 +149,7 @@ def main() -> None:
     print(f"  TARGET  {tgt_host}:{tgt_port}  db={tgt_db}  user={tgt_user}  password={mask(tgt_pass)}")
     print()
 
-    a = input("SOURCE가 운영(Neon 등)이 맞습니까? [yes/NO]: ").strip().lower()
+    a = input("SOURCE가 운영(RDS 등)이 맞습니까? [yes/NO]: ").strip().lower()
     if a != "yes":
         print("중단했습니다.")
         sys.exit(0)
