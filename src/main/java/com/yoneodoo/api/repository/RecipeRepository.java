@@ -83,4 +83,23 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
             ORDER BY r.created_at DESC
             """, nativeQuery = true)
     List<Recipe> findByIngredientRawName(@Param("rawName") String rawName);
+
+    /**
+     * 요리명 키워드로 레시피를 검색합니다 (사용자용 요리명 검색 API 전용).
+     * <p>
+     * 대소문자를 구분하지 않는 부분 일치(ILIKE)로 {@code title}을 검색합니다.
+     * 사용자 노출 이중 안전장치({@code status=SUCCESS}, {@code displayStatus=ACTIVE})를 함께 적용해
+     * 정상 처리된 레시피만 반환합니다.
+     *
+     * @param keyword 사용자가 입력한 요리명 검색어 (빈 문자열이면 호출하지 않는 것이 원칙)
+     * @return 제목에 키워드가 포함된 레시피 목록 (생성일 최신순)
+     */
+    @Query("""
+            SELECT r FROM Recipe r
+            WHERE LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              AND r.status = 'SUCCESS'
+              AND r.displayStatus = 'ACTIVE'
+            ORDER BY r.createdAt DESC
+            """)
+    List<Recipe> searchByTitle(@Param("keyword") String keyword);
 }
