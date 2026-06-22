@@ -37,7 +37,8 @@ public class IngredientBulkGroupingService {
 
     private final AdminService adminService;
     private final GeminiApiService geminiApiService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    /** Spring Boot auto-configure 된 ObjectMapper 빈 — GeminiApiService 와 동일한 인스턴스를 공유합니다. */
+    private final ObjectMapper objectMapper;
 
     /**
      * 현재 미분류인 모든 {@code raw_name} 을 50건 단위 청크로 Gemini 에 보내 그룹핑한 뒤,
