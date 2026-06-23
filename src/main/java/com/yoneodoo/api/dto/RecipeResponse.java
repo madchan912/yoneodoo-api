@@ -34,6 +34,8 @@ public class RecipeResponse {
     private final List<RecipeIngredientData> ingredients;
     /** DB 적재 시각. */
     private final LocalDateTime createdAt;
+    /** 마지막 수정 시각(레시피 수정 시 자동 갱신). */
+    private final LocalDateTime updatedAt;
 
     /**
      * {@link Recipe} 엔티티와 이미 변환된 재료 목록을 받아 DTO를 만듭니다.
@@ -48,7 +50,8 @@ public class RecipeResponse {
                 recipe.getYoutubeUrl(),
                 recipe.getVideoId(),
                 ingredients,
-                recipe.getCreatedAt()
+                recipe.getCreatedAt(),
+                recipe.getUpdatedAt()
         );
     }
 }
