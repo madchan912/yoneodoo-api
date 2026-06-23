@@ -1,11 +1,19 @@
 package com.yoneodoo.api.service;
 
 import com.yoneodoo.api.dto.RecipeCreateRequest;
+import com.yoneodoo.api.dto.RecipeIngredientData;
+import com.yoneodoo.api.entity.DisplayStatus;
+import com.yoneodoo.api.entity.IngredientMapping;
 import com.yoneodoo.api.entity.Recipe;
+import com.yoneodoo.api.repository.IngredientMappingRepository;
 import com.yoneodoo.api.repository.RecipeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 레시피 "적재(저장)" 비즈니스 로직을 담당하는 서비스입니다.
@@ -24,6 +32,8 @@ public class RecipeService {
 
     /** 레시피 행을 실제 DB에 INSERT/UPDATE 하는 저장소(인터페이스). */
     private final RecipeRepository recipeRepository;
+    /** 재료 정규화 매핑 테이블 — PENDING 로직에서 재료 매핑 완료 여부를 확인할 때 사용. */
+    private final IngredientMappingRepository ingredientMappingRepository;
 
     /**
      * 크롤러 등 외부 시스템이 보낸 레시피 한 건을 DB에 저장합니다.
@@ -61,6 +71,59 @@ public class RecipeService {
         recipe.setIngredients(request.getIngredients());
 
         // ④ 영속화: 트랜잭션 커밋 시점에 DB에 반영됩니다.
+        Recipe saved = recipeRepository.save(recipe);
+
+        // ⑤ PENDING 로직: 재료가 모두 ingredient_mapping에 있으면 SUCCESS/ACTIVE, 하나라도 없으면 PENDING/HIDDEN.
+        checkAndUpdateRecipeStatus(saved);
+    }
+
+    /**
+     * 레시피 재료가 모두 {@code ingredient_mapping}에 매핑됐는지 확인하고 status·displayStatus를 자동 갱신합니다.
+     * <p>
+     * 판정 규칙:<br>
+     * ① NO_SUBTITLES·FAILED·SKIP 같은 종료 상태는 덮어쓰지 않습니다.<br>
+     * ② 재료 목록이 비어 있으면 PENDING/HIDDEN — 아직 처리 전 상태로 간주합니다.<br>
+     * ③ 재료 이름이 모두 매핑 테이블에 있으면 SUCCESS/ACTIVE, 하나라도 없으면 PENDING/HIDDEN.<br>
+     * <p>
+     * 호출자의 트랜잭션 안에서 실행됩니다(별도 트랜잭션 없음). 세 군데에서 재사용:<br>
+     * · {@link #saveRecipe} (크롤러 적재 후), · AdminService.updateRecipe (어드민 수정 후),
+     * · AdminService.saveIngredientMappings / bulkSaveIngredientMappings (매핑 저장 후 관련 레시피 재평가).
+     *
+     * @param recipe 검사·갱신 대상 레시피 엔티티
+     */
+    public void checkAndUpdateRecipeStatus(Recipe recipe) {
+        String currentStatus = recipe.getStatus();
+        // 종료 상태(자막 없음·실패·스킵)는 재평가 대상에서 제외합니다.
+        if (Recipe.STATUS_NO_SUBTITLES.equals(currentStatus)
+                || "FAILED".equals(currentStatus)
+                || "SKIP".equals(currentStatus)) {
+            return;
+        }
+
+        List<RecipeIngredientData> ingredients = recipe.getIngredients();
+        if (ingredients == null || ingredients.isEmpty()) {
+            recipe.setStatus(Recipe.STATUS_PENDING);
+            recipe.setDisplayStatus(DisplayStatus.HIDDEN);
+            recipeRepository.save(recipe);
+            return;
+        }
+
+        Set<String> mappedRaws = ingredientMappingRepository.findAll().stream()
+                .map(IngredientMapping::getRawName)
+                .collect(Collectors.toSet());
+
+        boolean allMapped = ingredients.stream()
+                .map(RecipeIngredientData::getName)
+                .filter(name -> name != null && !name.isBlank())
+                .allMatch(mappedRaws::contains);
+
+        if (allMapped) {
+            recipe.setStatus(Recipe.STATUS_SUCCESS);
+            recipe.setDisplayStatus(DisplayStatus.ACTIVE);
+        } else {
+            recipe.setStatus(Recipe.STATUS_PENDING);
+            recipe.setDisplayStatus(DisplayStatus.HIDDEN);
+        }
         recipeRepository.save(recipe);
     }
 }
