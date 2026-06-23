@@ -267,6 +267,19 @@ public class AdminService {
     }
 
     /**
+     * 매핑 테이블에 등록된 raw_name 목록만 문자열 배열로 반환합니다.
+     * <p>
+     * RecipeEditModal 등에서 재료 입력값이 이미 매핑되어 있는지 빠르게 판단할 때 사용합니다.
+     * (전체 매핑 행이 아닌 rawName 만 담아 응답 크기를 줄입니다.)
+     */
+    @Transactional(readOnly = true)
+    public List<String> listMappedRawNames() {
+        return ingredientMappingRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(IngredientMapping::getRawName)
+                .toList();
+    }
+
+    /**
      * 특정 원본 재료 키(raw)에 대한 매핑 한 줄을 DB에서 삭제합니다.
      * <p>
      * 흐름:<br>
