@@ -486,7 +486,8 @@ public class AdminService {
                 r.getDisplayStatus() == null ? DisplayStatus.ACTIVE : r.getDisplayStatus(),
                 r.getVideoId(),
                 r.getYoutuberName(),
-                r.getCreatedAt()
+                r.getCreatedAt(),
+                r.getUpdatedAt()
         );
     }
 
