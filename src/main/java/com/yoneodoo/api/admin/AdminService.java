@@ -17,6 +17,7 @@ import com.yoneodoo.api.entity.Recipe;
 import com.yoneodoo.api.repository.IngredientMappingRepository;
 import com.yoneodoo.api.repository.RecipeRepository;
 import com.yoneodoo.api.service.IngredientSearchService;
+import com.yoneodoo.api.service.RecipeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +65,8 @@ public class AdminService {
      * "DB에 있는 재료명 집합"과 "검색 캐시"를 동기화합니다.
      */
     private final IngredientSearchService ingredientSearchService;
+    /** 레시피 저장·수정·매핑 변경 후 PENDING 로직을 재평가하기 위해 사용합니다. */
+    private final RecipeService recipeService;
 
     /**
      * 어드민 대시보드 상단에 보여 줄 숫자 요약을 만듭니다.
@@ -147,7 +150,9 @@ public class AdminService {
                     }
 
                     Recipe saved = recipeRepository.save(recipe);
-                    // 노출/재료가 바뀌었을 수 있으므로 검색 캐시를 다시 빌드(ACTIVE 만 캐시 소스).
+                    // ④ PENDING 로직: 매핑 완료 여부를 재평가해 status·displayStatus를 자동 갱신합니다.
+                    recipeService.checkAndUpdateRecipeStatus(saved);
+                    // ⑤ 노출/재료가 바뀌었을 수 있으므로 검색 캐시를 다시 빌드(ACTIVE 만 캐시 소스).
                     ingredientSearchService.initCache();
                     return toDetail(saved);
                 })
@@ -359,6 +364,14 @@ public class AdminService {
         }
 
         ingredientSearchService.initCache();
+
+        // Trigger C — PENDING 로직: 이번에 매핑된 raw를 포함한 레시피의 status를 재평가합니다.
+        for (String raw : uniqueRaws) {
+            for (Recipe r : recipeRepository.findByIngredientRawName(raw)) {
+                recipeService.checkAndUpdateRecipeStatus(r);
+            }
+        }
+
         return updated;
     }
 
@@ -377,6 +390,7 @@ public class AdminService {
             throw new IllegalArgumentException("items must not be empty");
         }
         int updated = 0;
+        Set<String> mappedRaws = new LinkedHashSet<>();
         for (IngredientBulkMapItem item : items) {
             if (item == null) {
                 continue;
@@ -393,12 +407,21 @@ public class AdminService {
                     },
                     () -> ingredientMappingRepository.save(new IngredientMapping(raw, master))
             );
+            mappedRaws.add(raw);
             updated++;
         }
         if (updated == 0) {
             throw new IllegalArgumentException("no valid mapping entries after normalization");
         }
         ingredientSearchService.initCache();
+
+        // Trigger C — PENDING 로직: 이번에 매핑된 raw를 포함한 레시피의 status를 재평가합니다.
+        for (String raw : mappedRaws) {
+            for (Recipe r : recipeRepository.findByIngredientRawName(raw)) {
+                recipeService.checkAndUpdateRecipeStatus(r);
+            }
+        }
+
         return updated;
     }
 
@@ -492,4 +515,11 @@ public class AdminService {
         }
         return out;
     }
+
+    /**
+     * 두 재료 목록의 이름 집합이 동일한지 비교합니다.
+     * <p>
+     * 순서·분량 차이는 무시하고, 이름 집합만 비교합니다. PENDING 재판정은 재료 이름이 바뀔 때만
+     * 의미가 있기 때문입니다(분량만 바뀐 수정은 매핑 결과에 영향을 주지 않음).
+     */
 }

@@ -40,6 +40,8 @@ public class Recipe {
     public static final String STATUS_SUCCESS = "SUCCESS";
     /** 자막 추출 실패로 노출에서 제외되는 상태 코드. */
     public static final String STATUS_NO_SUBTITLES = "NO_SUBTITLES";
+    /** 미분류 재료가 포함돼 매핑 완료 대기 중인 상태 코드. */
+    public static final String STATUS_PENDING = "PENDING";
 
     /** DB에서 자동 증가하는 기본키. 다른 테이블이 이 레시피를 참조할 때 사용합니다. */
     @Id
