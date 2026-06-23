@@ -18,6 +18,7 @@ public record AdminRecipeRowResponse(
         DisplayStatus displayStatus,
         String videoId,
         String youtuberName,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {
 }
