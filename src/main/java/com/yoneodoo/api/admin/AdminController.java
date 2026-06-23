@@ -144,6 +144,17 @@ public class AdminController {
     }
 
     /**
+     * 매핑 테이블에 등록된 raw_name 값만 목록으로 반환합니다.
+     * <p>
+     * RecipeEditModal 에서 각 재료명이 매핑되어 있는지 확인할 때 사용합니다.
+     * (masterName·createdAt 등 불필요한 필드를 제외해 응답 크기를 최소화합니다.)
+     */
+    @GetMapping("/ingredients/mapped-names")
+    public List<String> mappedIngredientNames() {
+        return adminService.listMappedRawNames();
+    }
+
+    /**
      * 한 건의 매핑을 삭제합니다.
      *
      * @param rawName 경로 변수 — URL 인코딩된 값이 디코딩된 뒤 서비스에서 다시 정규화됩니다.
