@@ -10,8 +10,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * 각 컨트롤러에 흩어져 있던 {@code @CrossOrigin}을 제거하고,
  * 허용 오리진·메서드를 여기서 일괄 적용합니다.
  * <p>
- * 허용 오리진: 로컬 개발({@code localhost:5173}), 운영 EC2({@code 43.201.95.155}).
- * 도메인 연결 후에는 도메인 주소를 추가하면 됩니다.
+ * 허용 오리진: 로컬 개발({@code localhost:5173}), 운영 EC2({@code 43.201.95.155}),
+ * 커스텀 도메인({@code yoneodoo.com}, {@code www.yoneodoo.com}).
  */
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
@@ -21,7 +21,9 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/api/**")
                 .allowedOrigins(
                         "http://localhost:5173",
-                        "http://43.201.95.155"
+                        "http://43.201.95.155",
+                        "https://yoneodoo.com",
+                        "https://www.yoneodoo.com"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*");
