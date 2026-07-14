@@ -96,7 +96,8 @@ public class RecipeService {
         // 종료 상태(자막 없음·실패·스킵)는 재평가 대상에서 제외합니다.
         if (Recipe.STATUS_NO_SUBTITLES.equals(currentStatus)
                 || "FAILED".equals(currentStatus)
-                || "SKIP".equals(currentStatus)) {
+                || "SKIP".equals(currentStatus)
+                || "NEEDS_REVIEW".equals(currentStatus)) {
             return;
         }
 
