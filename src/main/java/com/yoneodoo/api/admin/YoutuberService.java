@@ -158,7 +158,10 @@ public class YoutuberService {
     @Transactional
     public void finishCrawlHistory(String jobId, String newStatus, Map<String, Object> statusMap) {
         crawlHistoryRepository.findByJobId(jobId).ifPresent(history -> {
-            if ("running".equals(history.getStatus())) {
+            // "done"이 이미 저장된 경우만 건너뜀.
+            // "failed" 상태였더라도 실제 FastAPI 결과가 "done"이면 덮어씌움
+            // (pipeline 예외로 failed가 선저장된 후 재폴링에서 done이 오는 케이스 대응)
+            if (!"done".equals(history.getStatus())) {
                 history.setStatus(newStatus);
                 history.setFinishedAt(LocalDateTime.now());
                 try {
