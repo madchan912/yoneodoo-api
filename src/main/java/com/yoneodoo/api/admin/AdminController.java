@@ -1,6 +1,7 @@
 package com.yoneodoo.api.admin;
 
 import com.yoneodoo.api.admin.dto.AdminDashboardStatsResponse;
+import com.yoneodoo.api.admin.dto.CrawlTriggerRequest;
 import com.yoneodoo.api.admin.dto.AdminRecipeDetailResponse;
 import com.yoneodoo.api.admin.dto.AdminRecipeRowResponse;
 import com.yoneodoo.api.admin.dto.AdminRecipeUpdateRequest;
@@ -47,6 +48,7 @@ public class AdminController {
     private final AdminService adminService;
     private final IngredientSuggestionService ingredientSuggestionService;
     private final IngredientBulkGroupingService ingredientBulkGroupingService;
+    private final CrawlProxyService crawlProxyService;
 
     /** 대시보드 숫자 카드용 집계(레시피 건수·미분류 재료 수 등). */
     @GetMapping("/dashboard/stats")
@@ -210,6 +212,34 @@ public class AdminController {
     @PostMapping("/ingredients/bulk-suggest")
     public Map<String, List<String>> bulkSuggestIngredientGroups() {
         return ingredientBulkGroupingService.suggestBulkGroupingForAllUnclassified();
+    }
+
+    /**
+     * FastAPI 데이터 파이프라인에 채널 크롤링을 트리거합니다.
+     * <p>
+     * 내부에서 {@code POST http://localhost:8000/crawl}로 요청을 중계하고,
+     * FastAPI가 반환한 {@code job_id}와 {@code status}(pending)를 그대로 돌려줍니다.
+     * 진행 상태는 {@link #getCrawlStatus}로 폴링합니다.
+     *
+     * @param body 채널 URL, 수집 범위(start/end)
+     * @return FastAPI 응답 그대로 — 최소 {@code job_id}, {@code status} 포함
+     */
+    @PostMapping("/crawl")
+    public Map<String, Object> triggerCrawl(@RequestBody CrawlTriggerRequest body) {
+        return crawlProxyService.triggerCrawl(body);
+    }
+
+    /**
+     * 크롤링 job의 현재 진행 상태를 FastAPI에서 조회해 반환합니다.
+     * <p>
+     * 내부에서 {@code GET http://localhost:8000/status/{jobId}}로 중계합니다.
+     *
+     * @param jobId {@link #triggerCrawl} 응답의 {@code job_id}
+     * @return FastAPI 상태 응답 그대로 — {@code status}, {@code processed}, {@code total}, {@code results} 등 포함
+     */
+    @GetMapping("/crawl/status/{jobId}")
+    public Map<String, Object> getCrawlStatus(@PathVariable String jobId) {
+        return crawlProxyService.getCrawlStatus(jobId);
     }
 
     /**
