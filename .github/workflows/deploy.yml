@@ -24,6 +24,7 @@ jobs:
             git pull origin main
 
             docker build -t yoneodoo-api .
+            docker image prune -af
 
             docker stop yoneodoo-api || true
             docker rm   yoneodoo-api || true
