@@ -26,6 +26,7 @@ jobs:
             docker system prune -af
 
             docker build -t yoneodoo-api .
+            docker image prune -af
 
             docker stop yoneodoo-api || true
             docker rm   yoneodoo-api || true
