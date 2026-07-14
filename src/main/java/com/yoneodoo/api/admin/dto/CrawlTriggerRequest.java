@@ -16,6 +16,10 @@ public class CrawlTriggerRequest {
     @JsonProperty("channel_url")
     private String channelUrl;
 
+    /** 유튜버 표시명(이력 저장용). FastAPI에 함께 전달되며 youtuber_name 필드로 직렬화됩니다. */
+    @JsonProperty("youtuber_name")
+    private String youtuberName;
+
     /** 채널 숏츠 목록에서 가져올 시작 인덱스 (1-based). */
     private int start = 1;
 

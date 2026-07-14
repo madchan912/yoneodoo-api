@@ -23,6 +23,9 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
     /** {@code status} 컬럼 값이 정확히 일치하는 레시피 행 개수(대시보드 집계용). */
     long countByStatus(String status);
 
+    /** 특정 유튜버명의 레시피 수 집계(유튜버 관리 화면 totalRecipes 표시용). */
+    long countByYoutuberName(String youtuberName);
+
     /** 특정 상태의 레시피 목록 전체(어드민 필터 등). */
     List<Recipe> findByStatus(String status);
 

@@ -1,6 +1,7 @@
 package com.yoneodoo.api.admin;
 
 import com.yoneodoo.api.admin.dto.AdminDashboardStatsResponse;
+import com.yoneodoo.api.admin.dto.CrawlHistoryResponse;
 import com.yoneodoo.api.admin.dto.CrawlTriggerRequest;
 import com.yoneodoo.api.admin.dto.AdminRecipeDetailResponse;
 import com.yoneodoo.api.admin.dto.AdminRecipeRowResponse;
@@ -13,10 +14,13 @@ import com.yoneodoo.api.admin.dto.IngredientSuggestionRequest;
 import com.yoneodoo.api.admin.dto.IngredientSuggestionResponse;
 import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRecipeResponse;
 import com.yoneodoo.api.admin.dto.UnclassifiedIngredientRowResponse;
+import com.yoneodoo.api.admin.dto.WatchedYoutuberRequest;
+import com.yoneodoo.api.admin.dto.WatchedYoutuberResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -49,6 +53,7 @@ public class AdminController {
     private final IngredientSuggestionService ingredientSuggestionService;
     private final IngredientBulkGroupingService ingredientBulkGroupingService;
     private final CrawlProxyService crawlProxyService;
+    private final YoutuberService youtuberService;
 
     /** 대시보드 숫자 카드용 집계(레시피 건수·미분류 재료 수 등). */
     @GetMapping("/dashboard/stats")
@@ -214,32 +219,101 @@ public class AdminController {
         return ingredientBulkGroupingService.suggestBulkGroupingForAllUnclassified();
     }
 
+    // ───────────────── 유튜버 관리 ─────────────────
+
+    /** 등록된 유튜버 목록(등록 최신순). 각 항목에 레시피 수 포함. */
+    @GetMapping("/youtubers")
+    public List<WatchedYoutuberResponse> listYoutubers() {
+        return youtuberService.listYoutubers();
+    }
+
+    /**
+     * 유튜버를 신규 등록합니다.
+     *
+     * @param body 채널 URL·표시명
+     * @return 저장된 유튜버 DTO (201 Created)
+     */
+    @PostMapping("/youtubers")
+    @ResponseStatus(HttpStatus.CREATED)
+    public WatchedYoutuberResponse addYoutuber(@RequestBody WatchedYoutuberRequest body) {
+        try {
+            return youtuberService.addYoutuber(body);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    /**
+     * 유튜버를 목록에서 삭제합니다. 크롤링 이력은 유지됩니다.
+     *
+     * @param id 삭제할 유튜버 PK
+     */
+    @DeleteMapping("/youtubers/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteYoutuber(@PathVariable Long id) {
+        if (!youtuberService.deleteYoutuber(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "youtuber not found: " + id);
+        }
+    }
+
+    /**
+     * 유튜버 활성/비활성을 토글합니다(자동 배치 크롤링 대상 여부).
+     *
+     * @param id 토글할 유튜버 PK
+     * @return 변경 후 상태 DTO
+     */
+    @PatchMapping("/youtubers/{id}/toggle")
+    public WatchedYoutuberResponse toggleYoutuber(@PathVariable Long id) {
+        WatchedYoutuberResponse res = youtuberService.toggleYoutuber(id);
+        if (res == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "youtuber not found: " + id);
+        }
+        return res;
+    }
+
+    // ───────────────── 크롤링 트리거·이력 ─────────────────
+
     /**
      * FastAPI 데이터 파이프라인에 채널 크롤링을 트리거합니다.
      * <p>
-     * 내부에서 {@code POST http://localhost:8000/crawl}로 요청을 중계하고,
-     * FastAPI가 반환한 {@code job_id}와 {@code status}(pending)를 그대로 돌려줍니다.
-     * 진행 상태는 {@link #getCrawlStatus}로 폴링합니다.
+     * ① FastAPI {@code POST /crawl}로 중계 → job_id 획득.<br>
+     * ② {@code crawl_history}에 RUNNING 이력 INSERT.
      *
-     * @param body 채널 URL, 수집 범위(start/end)
+     * @param body 채널 URL·범위·유튜버명
      * @return FastAPI 응답 그대로 — 최소 {@code job_id}, {@code status} 포함
      */
     @PostMapping("/crawl")
     public Map<String, Object> triggerCrawl(@RequestBody CrawlTriggerRequest body) {
-        return crawlProxyService.triggerCrawl(body);
+        Map<String, Object> result = crawlProxyService.triggerCrawl(body);
+        String jobId = result.get("job_id") != null ? result.get("job_id").toString() : null;
+        if (jobId != null) {
+            youtuberService.saveCrawlHistory(body, jobId);
+        }
+        return result;
     }
 
     /**
      * 크롤링 job의 현재 진행 상태를 FastAPI에서 조회해 반환합니다.
      * <p>
-     * 내부에서 {@code GET http://localhost:8000/status/{jobId}}로 중계합니다.
+     * done/failed 확정 시 {@code crawl_history}를 자동 업데이트하고 유튜버 {@code last_crawled_at}을 갱신합니다.
      *
      * @param jobId {@link #triggerCrawl} 응답의 {@code job_id}
      * @return FastAPI 상태 응답 그대로 — {@code status}, {@code processed}, {@code total}, {@code results} 등 포함
      */
     @GetMapping("/crawl/status/{jobId}")
     public Map<String, Object> getCrawlStatus(@PathVariable String jobId) {
-        return crawlProxyService.getCrawlStatus(jobId);
+        Map<String, Object> statusMap = crawlProxyService.getCrawlStatus(jobId);
+        String status = statusMap.get("status") != null ? statusMap.get("status").toString() : "";
+        if ("done".equals(status) || "failed".equals(status)) {
+            youtuberService.finishCrawlHistory(jobId, status, statusMap);
+        }
+        return statusMap;
+    }
+
+    /** 크롤링 이력 전체를 최신순으로 반환합니다(어드민 이력 화면). */
+    @GetMapping("/crawl/history")
+    public List<CrawlHistoryResponse> getCrawlHistory() {
+        return youtuberService.listCrawlHistory();
     }
 
     /**
