@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Map;
 
@@ -66,6 +67,30 @@ public class CrawlProxyService {
         } catch (Exception e) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_GATEWAY, "데이터 파이프라인 서버 연결 실패: " + e.getMessage());
+        }
+    }
+
+    /**
+     * FastAPI에서 채널 전체 숏츠 수를 조회합니다.
+     * <p>
+     * 크롤링 트리거 UI에서 끝 인덱스 기본값 설정에 사용합니다.
+     * scrapetube가 전체 영상을 fetch하므로 채널 규모에 따라 응답이 느릴 수 있습니다.
+     *
+     * @param channelUrl 유튜브 채널 URL
+     * @return {@code channel_url}, {@code total_videos} 포함 Map
+     * @throws ResponseStatusException 502 — FastAPI 서버 연결 실패
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getChannelInfo(String channelUrl) {
+        try {
+            String url = UriComponentsBuilder.fromUriString(dataUrl + "/channel-info")
+                    .queryParam("channel_url", channelUrl)
+                    .build()
+                    .toUriString();
+            return restTemplate.getForObject(url, Map.class);
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY, "채널 정보 조회 실패: " + e.getMessage());
         }
     }
 

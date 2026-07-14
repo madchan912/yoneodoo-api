@@ -274,6 +274,19 @@ public class AdminController {
     // ───────────────── 크롤링 트리거·이력 ─────────────────
 
     /**
+     * 채널 전체 숏츠 수를 FastAPI에서 조회합니다.
+     * <p>
+     * 크롤링 트리거 UI에서 [크롤링] 버튼 클릭 시 호출하여 끝 인덱스 기본값을 자동 채웁니다.
+     *
+     * @param channelUrl 유튜브 채널 URL
+     * @return {@code channel_url}, {@code total_videos} 포함 Map
+     */
+    @GetMapping("/channel-info")
+    public Map<String, Object> getChannelInfo(@RequestParam String channelUrl) {
+        return crawlProxyService.getChannelInfo(channelUrl);
+    }
+
+    /**
      * FastAPI 데이터 파이프라인에 채널 크롤링을 트리거합니다.
      * <p>
      * ① FastAPI {@code POST /crawl}로 중계 → job_id 획득.<br>
