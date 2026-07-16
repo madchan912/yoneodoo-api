@@ -30,7 +30,7 @@ public class RecipeEmbeddingService {
 
     private final GeminiApiService geminiApiService;
     private final RecipeEmbeddingRepository embeddingRepository;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 레시피 한 건을 임베딩해 {@code recipe_embeddings}에 upsert합니다.
