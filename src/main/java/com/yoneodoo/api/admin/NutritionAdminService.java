@@ -1,6 +1,7 @@
 package com.yoneodoo.api.admin;
 
 import com.yoneodoo.api.admin.dto.FoodSearchResponse;
+import com.yoneodoo.api.admin.dto.NutritionMatchedResponse;
 import com.yoneodoo.api.admin.dto.NutritionStatsResponse;
 import com.yoneodoo.api.admin.dto.NutritionUnmatchedResponse;
 import com.yoneodoo.api.admin.dto.NutritionUpdateRequest;
@@ -38,6 +39,28 @@ public class NutritionAdminService {
 
     private final IngredientNutritionRepository nutritionRepo;
     private final FoodNutritionMasterRepository foodMasterRepo;
+
+    /**
+     * ① source != 'manual_needed'인 항목 전체를 이름 오름차순으로 반환합니다.
+     * 어드민 완료 탭에서 기존 값 확인·수정 시 사용합니다.
+     */
+    public List<NutritionMatchedResponse> listMatched() {
+        return nutritionRepo.findBySourceNotOrderByMasterNameAsc("manual_needed")
+                .stream()
+                .map(n -> new NutritionMatchedResponse(
+                        n.getId(),
+                        n.getMasterName(),
+                        n.getCalories(),
+                        n.getProtein(),
+                        n.getFat(),
+                        n.getSaturatedFat(),
+                        n.getCarbohydrate(),
+                        n.getSugar(),
+                        n.getSodium(),
+                        n.getSource()
+                ))
+                .toList();
+    }
 
     /**
      * ① source='manual_needed'인 재료 목록을 이름 오름차순으로 반환합니다.

@@ -27,6 +27,12 @@ public interface IngredientNutritionRepository extends JpaRepository<IngredientN
     Optional<IngredientNutrition> findByMasterName(String masterName);
 
     /**
+     * 특정 source를 제외한 전체 목록을 이름 오름차순으로 가져옵니다.
+     * 완료 탭("source != 'manual_needed'") 조회에 사용합니다.
+     */
+    List<IngredientNutrition> findBySourceNotOrderByMasterNameAsc(String source);
+
+    /**
      * 특정 source 값의 행 수. 통계(매칭 완료/미매칭 카운트)에 사용합니다.
      */
     long countBySource(String source);
