@@ -66,7 +66,7 @@ public class GeminiApiService {
         if (!props.isConfigured()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Gemini API key is not configured");
         }
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent"
+        String url = "https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent"
                 + "?key=" + props.apiKey();
         URI uri = URI.create(url);
 
