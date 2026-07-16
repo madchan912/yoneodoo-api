@@ -8,7 +8,6 @@ import com.yoneodoo.api.entity.IngredientNutrition;
 import com.yoneodoo.api.repository.FoodNutritionMasterRepository;
 import com.yoneodoo.api.repository.IngredientNutritionRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,7 +55,7 @@ public class NutritionAdminService {
      * 어드민이 직접 재료명을 입력해 식품성분표에서 적합한 항목을 찾는 데 사용합니다.
      */
     public List<FoodSearchResponse> searchFood(String keyword) {
-        return foodMasterRepo.searchByFoodName(keyword, PageRequest.of(0, 20))
+        return foodMasterRepo.searchByFoodName(keyword)
                 .stream()
                 .map(f -> new FoodSearchResponse(
                         f.getId(),
@@ -68,7 +67,8 @@ public class NutritionAdminService {
                         f.getSaturatedFat(),
                         f.getCarbohydrate(),
                         f.getSugar(),
-                        f.getSodium()
+                        f.getSodium(),
+                        f.getSourceVer()
                 ))
                 .toList();
     }

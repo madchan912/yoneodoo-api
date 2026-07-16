@@ -17,6 +17,7 @@ import java.math.BigDecimal;
  * @param carbohydrate 탄수화물(g/100g)
  * @param sugar       당류(g/100g)
  * @param sodium      나트륨(mg/100g)
+ * @param sourceVer   출처 버전(예: "10.0", "10.3") — 어드민 검색 결과에서 시트 버전 표시용
  */
 public record FoodSearchResponse(
         Long id,
@@ -28,6 +29,7 @@ public record FoodSearchResponse(
         BigDecimal saturatedFat,
         BigDecimal carbohydrate,
         BigDecimal sugar,
-        BigDecimal sodium
+        BigDecimal sodium,
+        String sourceVer
 ) {
 }
