@@ -8,6 +8,7 @@ import com.yoneodoo.api.entity.Recipe;
 import com.yoneodoo.api.repository.IngredientMappingRepository;
 import com.yoneodoo.api.repository.RecipeRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,12 +29,15 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RecipeService {
 
     /** 레시피 행을 실제 DB에 INSERT/UPDATE 하는 저장소(인터페이스). */
     private final RecipeRepository recipeRepository;
     /** 재료 정규화 매핑 테이블 — PENDING 로직에서 재료 매핑 완료 여부를 확인할 때 사용. */
     private final IngredientMappingRepository ingredientMappingRepository;
+    /** 레시피 저장 후 임베딩 생성·저장 (RAG 파이프라인 시작점). */
+    private final RecipeEmbeddingService recipeEmbeddingService;
 
     /**
      * 크롤러 등 외부 시스템이 보낸 레시피 한 건을 DB에 저장합니다.
@@ -75,6 +79,13 @@ public class RecipeService {
 
         // ⑤ PENDING 로직: 재료가 모두 ingredient_mapping에 있으면 SUCCESS/ACTIVE, 하나라도 없으면 PENDING/HIDDEN.
         checkAndUpdateRecipeStatus(saved);
+
+        // ⑥ RAG 임베딩: 실패해도 레시피 저장은 롤백하지 않음.
+        try {
+            recipeEmbeddingService.embedAndSave(saved);
+        } catch (Exception e) {
+            log.warn("임베딩 생성 실패 (레시피 저장은 성공): recipe_id={} msg={}", saved.getId(), e.getMessage());
+        }
     }
 
     /**
