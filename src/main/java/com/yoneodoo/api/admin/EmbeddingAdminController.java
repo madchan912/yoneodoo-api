@@ -45,17 +45,30 @@ public class EmbeddingAdminController {
         int failed = 0;
 
         for (Recipe recipe : targets) {
-            try {
-                embeddingService.embedAndSave(recipe);
-                success++;
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.warn("백필 인터럽트 — 중단");
-                break;
-            } catch (Exception e) {
-                log.warn("임베딩 실패 — recipe_id={} msg={}", recipe.getId(), e.getMessage());
-                failed++;
+            boolean saved = false;
+            for (int attempt = 1; attempt <= 3 && !saved; attempt++) {
+                try {
+                    embeddingService.embedAndSave(recipe);
+                    saved = true;
+                    success++;
+                    Thread.sleep(4000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("백필 인터럽트 — 중단");
+                    return Map.of("total", targets.size(), "success", success, "failed", failed);
+                } catch (Exception e) {
+                    String msg = e.getMessage();
+                    if (msg != null && msg.contains("429") && attempt < 3) {
+                        log.warn("429 쿼터 초과 — recipe_id={} {}회차, 30초 대기", recipe.getId(), attempt);
+                        try { Thread.sleep(30000); } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            return Map.of("total", targets.size(), "success", success, "failed", failed);
+                        }
+                    } else {
+                        log.warn("임베딩 실패 — recipe_id={} msg={}", recipe.getId(), msg);
+                        failed++;
+                    }
+                }
             }
         }
 
