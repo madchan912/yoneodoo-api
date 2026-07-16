@@ -1,6 +1,7 @@
 package com.yoneodoo.api.admin;
 
 import com.yoneodoo.api.admin.dto.FoodSearchResponse;
+import com.yoneodoo.api.admin.dto.NutritionMatchedResponse;
 import com.yoneodoo.api.admin.dto.NutritionStatsResponse;
 import com.yoneodoo.api.admin.dto.NutritionUnmatchedResponse;
 import com.yoneodoo.api.admin.dto.NutritionUpdateRequest;
@@ -21,6 +22,15 @@ import java.util.List;
 public class NutritionAdminController {
 
     private final NutritionAdminService nutritionAdminService;
+
+    /**
+     * 적재 완료(source != 'manual_needed') 재료 목록을 반환합니다.
+     * 어드민 완료 탭에서 기존 값 확인·수정 시 사용됩니다.
+     */
+    @GetMapping("/matched")
+    public List<NutritionMatchedResponse> listMatched() {
+        return nutritionAdminService.listMatched();
+    }
 
     /**
      * 수동 입력이 필요한(source='manual_needed') 재료 목록을 반환합니다.
