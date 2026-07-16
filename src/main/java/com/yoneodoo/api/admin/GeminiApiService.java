@@ -14,6 +14,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -47,6 +49,71 @@ public class GeminiApiService {
     private final GeminiProperties props;
     private final RestClient geminiRestClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * Gemini {@code text-embedding-004} 모델로 텍스트를 768차원 벡터로 변환합니다.
+     * <p>
+     * ① 텍스트를 {@code embedContent} 엔드포인트에 POST<br>
+     * ② 응답 {@code embedding.values} 배열을 {@code List<Double>} 로 반환<br>
+     * <p>
+     * 호출 전에 {@link #isConfigured()} 가 true 여야 합니다.
+     *
+     * @param text 임베딩할 텍스트 (레시피명 + 재료 목록 형태 권장)
+     * @return 768차원 부동소수점 벡터
+     * @throws ResponseStatusException 키 미설정(503), 빈 응답(502), API 오류(502/504)
+     */
+    public List<Double> embedContent(String text) {
+        if (!props.isConfigured()) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Gemini API key is not configured");
+        }
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent"
+                + "?key=" + props.apiKey();
+        URI uri = URI.create(url);
+
+        Map<String, Object> body = Map.of(
+                "model", "models/text-embedding-004",
+                "content", Map.of("parts", List.of(Map.of("text", text)))
+        );
+
+        try {
+            String responseBody = geminiRestClient.post()
+                    .uri(uri)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+
+            if (responseBody == null || responseBody.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Gemini embedding returned empty response");
+            }
+
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode values = root.path("embedding").path("values");
+            if (values.isMissingNode() || !values.isArray()) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                        "Unexpected Gemini embedding response: " + responseBody.substring(0, Math.min(200, responseBody.length())));
+            }
+
+            List<Double> vector = new ArrayList<>(values.size());
+            for (JsonNode v : values) {
+                vector.add(v.asDouble());
+            }
+            return vector;
+
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (HttpStatusCodeException e) {
+            log.warn("Gemini embed HTTP {} body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Gemini embed failed: HTTP " + e.getStatusCode().value());
+        } catch (ResourceAccessException e) {
+            log.warn("Gemini embed timeout/network error", e);
+            throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Gemini embed call timed out");
+        } catch (Exception e) {
+            log.warn("Failed to parse Gemini embedding response", e);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to parse Gemini embedding response");
+        }
+    }
 
     /**
      * Gemini {@code generateContent} 한 번 호출하고 원본 JSON 응답 트리를 돌려줍니다.

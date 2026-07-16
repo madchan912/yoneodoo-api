@@ -105,4 +105,19 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
             ORDER BY r.createdAt DESC
             """)
     List<Recipe> searchByTitle(@Param("keyword") String keyword);
+
+    /**
+     * {@code recipe_embeddings}에 아직 없는 레시피 전체를 ID 오름차순으로 반환합니다.
+     * <p>
+     * 기획 관점: 어드민 백필 API가 "한 번도 임베딩되지 않은 레시피"를 찾아 순차적으로 처리할 때 사용합니다.
+     * NOT EXISTS 서브쿼리로 recipe_embeddings를 직접 조인하지 않고 존재 여부만 확인합니다.
+     */
+    @Query(value = """
+            SELECT * FROM recipes r
+            WHERE NOT EXISTS (
+                SELECT 1 FROM recipe_embeddings re WHERE re.recipe_id = r.id
+            )
+            ORDER BY r.id
+            """, nativeQuery = true)
+    List<Recipe> findRecipesWithoutEmbeddings();
 }
