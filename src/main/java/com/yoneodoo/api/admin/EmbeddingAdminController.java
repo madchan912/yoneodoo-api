@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -28,18 +29,20 @@ public class EmbeddingAdminController {
     private final RecipeRepository recipeRepository;
 
     /**
-     * {@code recipe_embeddings}에 없는 레시피 전체를 순차적으로 임베딩해 적재합니다.
+     * {@code recipe_embeddings}에 없는 레시피를 순차적으로 임베딩해 적재합니다.
      * <p>
-     * ① recipe_embeddings에 아직 없는 레시피 전체 조회<br>
+     * ① recipe_embeddings에 아직 없는 레시피 조회 (limit 지정 시 해당 건수만)<br>
      * ② 각 레시피에 대해 Gemini embedContent 호출 → upsert (실패 시 건너뜀)<br>
-     * ③ API 쿼터 보호를 위해 호출 간 500ms 딜레이<br>
+     * ③ API 쿼터 보호를 위해 호출 간 4초 딜레이, 429 시 30초 대기 후 최대 3회 재시도<br>
      *
+     * @param limit 처리할 최대 건수 (생략 시 전체)
      * @return {@code { "total": N, "success": N, "failed": N }}
      */
     @PostMapping("/backfill")
-    public Map<String, Integer> backfill() {
-        List<Recipe> targets = recipeRepository.findRecipesWithoutEmbeddings();
-        log.info("임베딩 백필 시작 — 대상 {}건", targets.size());
+    public Map<String, Integer> backfill(@RequestParam(required = false) Integer limit) {
+        List<Recipe> all = recipeRepository.findRecipesWithoutEmbeddings();
+        List<Recipe> targets = (limit != null && limit > 0 && limit < all.size()) ? all.subList(0, limit) : all;
+        log.info("임베딩 백필 시작 — 전체 미처리 {}건, 이번 대상 {}건", all.size(), targets.size());
 
         int success = 0;
         int failed = 0;
