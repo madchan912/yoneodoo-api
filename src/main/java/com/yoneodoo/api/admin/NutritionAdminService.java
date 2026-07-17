@@ -97,17 +97,27 @@ public class NutritionAdminService {
     }
 
     /**
-     * ① masterName으로 ingredient_nutrition을 찾고
+     * source='manual_needed'인 재료 목록을 이름 오름차순으로 반환합니다.
+     * 어드민 "확인필요" 탭과 파이프라인 영양 자동화에서 사용합니다.
+     */
+    public List<NutritionUnmatchedResponse> listManualNeeded() {
+        return nutritionRepo.findBySourceOrderByMasterNameAsc("manual_needed")
+                .stream()
+                .map(n -> new NutritionUnmatchedResponse(n.getId(), n.getMasterName(), n.getSource()))
+                .toList();
+    }
+
+    /**
+     * ① masterName으로 ingredient_nutrition을 찾고 (없으면 신규 생성 — upsert)
      * ② 요청 본문의 영양 값과 source로 업데이트합니다.
      * ③ 저장 후 갱신된 항목을 반환합니다.
-     *
-     * @throws ResponseStatusException 404: masterName이 ingredient_nutrition에 없을 때
+     * <p>
+     * 파이프라인이 새 재료를 Gemini로 추정해 적재할 때 사용합니다(404 발생 없음).
      */
     @Transactional
     public NutritionUnmatchedResponse updateNutrition(String masterName, NutritionUpdateRequest req) {
         IngredientNutrition n = nutritionRepo.findByMasterName(masterName)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "ingredient_nutrition not found: " + masterName));
+                .orElseGet(() -> IngredientNutrition.ofNew(masterName));
 
         n.setCalories(req.calories());
         n.setProtein(req.protein());

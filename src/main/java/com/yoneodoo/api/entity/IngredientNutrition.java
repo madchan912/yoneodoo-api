@@ -86,6 +86,12 @@ public class IngredientNutrition {
     @Column(length = 50)
     private String source;
 
+    public static IngredientNutrition ofNew(String masterName) {
+        IngredientNutrition n = new IngredientNutrition();
+        n.masterName = masterName;
+        return n;
+    }
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

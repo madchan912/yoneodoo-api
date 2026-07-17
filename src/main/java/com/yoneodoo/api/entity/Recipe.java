@@ -36,13 +36,14 @@ public class Recipe {
      * 파이프라인 상태 코드 모음(문자열 상수).
      * <p>
      * 사용자 노출 가드(이중 안전장치)에서 "정상 처리된 레시피만 노출"한다는 의미로 {@link #STATUS_SUCCESS} 를 사용합니다.
-     * 다른 코드(NO_SUBTITLES, SKIP 등)도 늘어나면 여기로 모아두면 됩니다.
      */
     public static final String STATUS_SUCCESS = "SUCCESS";
     /** 자막 추출 실패로 노출에서 제외되는 상태 코드. */
     public static final String STATUS_NO_SUBTITLES = "NO_SUBTITLES";
-    /** 미분류 재료가 포함돼 매핑 완료 대기 중인 상태 코드. */
-    public static final String STATUS_PENDING = "PENDING";
+    /** 재료명 정규화(ingredient_mapping) 미완료 — 매핑 완료 시 자동으로 SUCCESS 또는 INCOMPLETE로 전환. */
+    public static final String STATUS_UNMATCHED = "UNMATCHED";
+    /** 재료명은 정규화됐으나 수량(amount)이 null인 항목이 있어 수동 입력 필요. */
+    public static final String STATUS_INCOMPLETE = "INCOMPLETE";
 
     /** DB에서 자동 증가하는 기본키. 다른 테이블이 이 레시피를 참조할 때 사용합니다. */
     @Id
@@ -103,6 +104,14 @@ public class Recipe {
     /** 자막·스크립트 원문(긴 텍스트). 검색이나 요약 기능에 활용할 수 있는 원천 데이터입니다. */
     @Column(columnDefinition = "TEXT")
     private String transcript;
+
+    /** 유튜브 영상의 더보기(description) 원문. 재료·레시피 설명이 포함될 수 있습니다. */
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    /** 유튜브 영상의 첫 번째 댓글 원문. 크리에이터가 재료를 댓글로 올리는 경우에 활용합니다. */
+    @Column(name = "first_comment", columnDefinition = "TEXT")
+    private String firstComment;
 
     /** 이 행이 DB에 처음 저장된 시각(자동 기록, 이후 수정되지 않음). */
     @CreationTimestamp

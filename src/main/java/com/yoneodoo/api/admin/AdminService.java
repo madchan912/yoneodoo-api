@@ -65,7 +65,7 @@ public class AdminService {
      * "DB에 있는 재료명 집합"과 "검색 캐시"를 동기화합니다.
      */
     private final IngredientSearchService ingredientSearchService;
-    /** 레시피 저장·수정·매핑 변경 후 PENDING 로직을 재평가하기 위해 사용합니다. */
+    /** 레시피 저장·수정·매핑 변경 후 상태를 재평가하기 위해 사용합니다. */
     private final RecipeService recipeService;
 
     /**
@@ -149,8 +149,15 @@ public class AdminService {
                         recipe.setStatus(request.getStatus().trim());
                     }
 
+                    if (request.getDescription() != null) {
+                        recipe.setDescription(request.getDescription());
+                    }
+                    if (request.getFirstComment() != null) {
+                        recipe.setFirstComment(request.getFirstComment());
+                    }
+
                     Recipe saved = recipeRepository.save(recipe);
-                    // ④ PENDING 로직: 매핑 완료 여부를 재평가해 status·displayStatus를 자동 갱신합니다.
+                    // ④ 상태 자동 평가: 매핑 완료·수량 유무에 따라 UNMATCHED/INCOMPLETE/SUCCESS 결정.
                     recipeService.checkAndUpdateRecipeStatus(saved);
                     // ⑤ 노출/재료가 바뀌었을 수 있으므로 검색 캐시를 다시 빌드(ACTIVE 만 캐시 소스).
                     ingredientSearchService.initCache();
@@ -378,7 +385,7 @@ public class AdminService {
 
         ingredientSearchService.initCache();
 
-        // Trigger C — PENDING 로직: 이번에 매핑된 raw를 포함한 레시피의 status를 재평가합니다.
+        // Trigger C — 이번에 매핑된 raw를 포함한 레시피의 status를 재평가합니다.
         for (String raw : uniqueRaws) {
             for (Recipe r : recipeRepository.findByIngredientRawName(raw)) {
                 recipeService.checkAndUpdateRecipeStatus(r);
@@ -428,7 +435,7 @@ public class AdminService {
         }
         ingredientSearchService.initCache();
 
-        // Trigger C — PENDING 로직: 이번에 매핑된 raw를 포함한 레시피의 status를 재평가합니다.
+        // Trigger C — 이번에 매핑된 raw를 포함한 레시피의 status를 재평가합니다.
         for (String raw : mappedRaws) {
             for (Recipe r : recipeRepository.findByIngredientRawName(raw)) {
                 recipeService.checkAndUpdateRecipeStatus(r);
@@ -503,6 +510,8 @@ public class AdminService {
                 r.getYoutuberName(),
                 r.getIngredients(),
                 r.getTranscript(),
+                r.getDescription(),
+                r.getFirstComment(),
                 r.getCreatedAt()
         );
     }
@@ -533,7 +542,7 @@ public class AdminService {
     /**
      * 두 재료 목록의 이름 집합이 동일한지 비교합니다.
      * <p>
-     * 순서·분량 차이는 무시하고, 이름 집합만 비교합니다. PENDING 재판정은 재료 이름이 바뀔 때만
+     * 순서·분량 차이는 무시하고, 이름 집합만 비교합니다. 상태 재판정은 재료 이름이 바뀔 때만
      * 의미가 있기 때문입니다(분량만 바뀐 수정은 매핑 결과에 영향을 주지 않음).
      */
 }

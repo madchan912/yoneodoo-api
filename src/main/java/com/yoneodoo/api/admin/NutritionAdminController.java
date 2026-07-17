@@ -42,6 +42,15 @@ public class NutritionAdminController {
     }
 
     /**
+     * source='manual_needed' 재료 목록을 반환합니다.
+     * 어드민 "확인필요" 탭 및 파이프라인 자동화에서 사용합니다.
+     */
+    @GetMapping("/manual-needed")
+    public List<NutritionUnmatchedResponse> listManualNeeded() {
+        return nutritionAdminService.listManualNeeded();
+    }
+
+    /**
      * 식품성분표(food_nutrition_master)에서 키워드로 식품명을 검색합니다(최대 20건).
      * 어드민이 수동 매칭 시 원하는 식품을 찾을 때 사용합니다.
      *
