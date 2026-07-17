@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -40,4 +41,35 @@ public interface RecipeEmbeddingRepository extends JpaRepository<RecipeEmbedding
                 updated_at = NOW()
             """, nativeQuery = true)
     void upsertEmbedding(@Param("recipeId") Long recipeId, @Param("embedding") String embeddingJson);
+
+    /**
+     * 쿼리 벡터와 코사인 유사도가 높은 레시피를 최대 20건 반환합니다.
+     * <p>
+     * 기획 관점: RAG 식단 플래너의 후보 레시피 풀 — 벡터 근접 순으로 뽑아
+     * Gemini 식단 조합 프롬프트에 전달합니다.
+     * <p>
+     * 반환 컬럼 순서: id(0), title(1), video_id(2), youtuber_name(3),
+     * calories(4), protein(5), coverage_pct(6), similarity(7)
+     *
+     * @param embedding   쿼리 벡터 JSON 배열 문자열 {@code "[0.1, ...]"}
+     * @param maxCalories 칼로리 상한 (null이면 제한 없음)
+     */
+    @Query(value = """
+            SELECT r.id, r.title, r.video_id, r.youtuber_name,
+                   rn.calories, rn.protein, rn.coverage_pct,
+                   1 - (re.embedding <=> CAST(:embedding AS vector)) AS similarity
+            FROM recipe_embeddings re
+            JOIN recipes r ON re.recipe_id = r.id
+            JOIN recipe_nutrition rn ON r.id = rn.recipe_id
+            WHERE r.status = 'SUCCESS'
+              AND r.display_status = 'ACTIVE'
+              AND rn.coverage_pct >= 50
+              AND (:maxCalories IS NULL OR rn.calories <= :maxCalories)
+            ORDER BY re.embedding <=> CAST(:embedding AS vector)
+            LIMIT 20
+            """, nativeQuery = true)
+    List<Object[]> findSimilarRecipes(
+            @Param("embedding") String embedding,
+            @Param("maxCalories") Double maxCalories
+    );
 }
