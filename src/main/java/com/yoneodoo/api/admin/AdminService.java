@@ -149,6 +149,13 @@ public class AdminService {
                         recipe.setStatus(request.getStatus().trim());
                     }
 
+                    if (request.getDescription() != null) {
+                        recipe.setDescription(request.getDescription());
+                    }
+                    if (request.getFirstComment() != null) {
+                        recipe.setFirstComment(request.getFirstComment());
+                    }
+
                     Recipe saved = recipeRepository.save(recipe);
                     // ④ 상태 자동 평가: 매핑 완료·수량 유무에 따라 UNMATCHED/INCOMPLETE/SUCCESS 결정.
                     recipeService.checkAndUpdateRecipeStatus(saved);
@@ -503,6 +510,8 @@ public class AdminService {
                 r.getYoutuberName(),
                 r.getIngredients(),
                 r.getTranscript(),
+                r.getDescription(),
+                r.getFirstComment(),
                 r.getCreatedAt()
         );
     }

@@ -38,4 +38,10 @@ public class AdminRecipeUpdateRequest {
 
     /** 파이프라인 상태 코드(SUCCESS/NO_SUBTITLES 등). null/빈 문자열이면 기존 값 유지. */
     private String status;
+
+    /** 유튜브 더보기(description) 원문. null이면 기존 값 유지. */
+    private String description;
+
+    /** 유튜브 첫 번째 댓글 원문. null이면 기존 값 유지. */
+    private String firstComment;
 }

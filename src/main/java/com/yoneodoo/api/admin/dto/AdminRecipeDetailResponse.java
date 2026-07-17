@@ -20,7 +20,9 @@ import java.util.List;
  * @param youtubeUrl     유튜브 영상 전체 URL(수정 화면에서는 읽기 전용)
  * @param youtuberName   크리에이터 표시명
  * @param ingredients    재료 배열(이름·분량)
- * @param transcript     자막 원문(표시용, 수정 화면 기본에서는 안 보이게 가능)
+ * @param transcript     자막 원문
+ * @param description    유튜브 더보기 원문
+ * @param firstComment   유튜브 첫 번째 댓글 원문
  * @param createdAt      최초 적재 시각
  */
 public record AdminRecipeDetailResponse(
@@ -33,6 +35,8 @@ public record AdminRecipeDetailResponse(
         String youtuberName,
         List<RecipeIngredientData> ingredients,
         String transcript,
+        String description,
+        String firstComment,
         LocalDateTime createdAt
 ) {
 }

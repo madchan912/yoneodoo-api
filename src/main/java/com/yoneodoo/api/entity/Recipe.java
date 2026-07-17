@@ -105,6 +105,14 @@ public class Recipe {
     @Column(columnDefinition = "TEXT")
     private String transcript;
 
+    /** 유튜브 영상의 더보기(description) 원문. 재료·레시피 설명이 포함될 수 있습니다. */
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    /** 유튜브 영상의 첫 번째 댓글 원문. 크리에이터가 재료를 댓글로 올리는 경우에 활용합니다. */
+    @Column(name = "first_comment", columnDefinition = "TEXT")
+    private String firstComment;
+
     /** 이 행이 DB에 처음 저장된 시각(자동 기록, 이후 수정되지 않음). */
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
