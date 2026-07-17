@@ -77,7 +77,7 @@ public class RecipeService {
         // ④ 영속화: 트랜잭션 커밋 시점에 DB에 반영됩니다.
         Recipe saved = recipeRepository.save(recipe);
 
-        // ⑤ PENDING 로직: 재료가 모두 ingredient_mapping에 있으면 SUCCESS/ACTIVE, 하나라도 없으면 PENDING/HIDDEN.
+        // ⑤ 상태 자동 평가: 매핑 완료 여부·수량 유무에 따라 UNMATCHED/INCOMPLETE/SUCCESS 결정.
         checkAndUpdateRecipeStatus(saved);
 
         // ⑥ RAG 임베딩: 실패해도 레시피 저장은 롤백하지 않음.
@@ -89,32 +89,32 @@ public class RecipeService {
     }
 
     /**
-     * 레시피 재료가 모두 {@code ingredient_mapping}에 매핑됐는지 확인하고 status·displayStatus를 자동 갱신합니다.
+     * 레시피 재료 매핑·수량 완료 여부를 확인하고 status·displayStatus를 자동 갱신합니다.
      * <p>
      * 판정 규칙:<br>
-     * ① NO_SUBTITLES·FAILED·SKIP 같은 종료 상태는 덮어쓰지 않습니다.<br>
-     * ② 재료 목록이 비어 있으면 PENDING/HIDDEN — 아직 처리 전 상태로 간주합니다.<br>
-     * ③ 재료 이름이 모두 매핑 테이블에 있으면 SUCCESS/ACTIVE, 하나라도 없으면 PENDING/HIDDEN.<br>
+     * ① NO_SUBTITLES·FAILED·SKIP은 종료 상태 — 재평가 없이 유지.<br>
+     * ② 재료 목록이 비어 있으면 UNMATCHED/HIDDEN.<br>
+     * ③ 재료명이 하나라도 매핑 테이블에 없으면 UNMATCHED/HIDDEN.<br>
+     * ④ 재료명은 모두 매핑됐지만 amount null이 있으면 INCOMPLETE/HIDDEN.<br>
+     * ⑤ 재료명 전부 매핑 + amount 전부 있으면 SUCCESS/ACTIVE.<br>
      * <p>
-     * 호출자의 트랜잭션 안에서 실행됩니다(별도 트랜잭션 없음). 세 군데에서 재사용:<br>
-     * · {@link #saveRecipe} (크롤러 적재 후), · AdminService.updateRecipe (어드민 수정 후),
-     * · AdminService.saveIngredientMappings / bulkSaveIngredientMappings (매핑 저장 후 관련 레시피 재평가).
+     * UNMATCHED·INCOMPLETE 등 중간 상태도 재평가 대상에 포함되므로
+     * 정규화 완료 시 자동으로 INCOMPLETE 또는 SUCCESS로 승급합니다.
      *
      * @param recipe 검사·갱신 대상 레시피 엔티티
      */
     public void checkAndUpdateRecipeStatus(Recipe recipe) {
         String currentStatus = recipe.getStatus();
-        // 종료 상태(자막 없음·실패·스킵)는 재평가 대상에서 제외합니다.
+        // 종료 상태는 재평가 없이 유지합니다.
         if (Recipe.STATUS_NO_SUBTITLES.equals(currentStatus)
                 || "FAILED".equals(currentStatus)
-                || "SKIP".equals(currentStatus)
-                || "NEEDS_REVIEW".equals(currentStatus)) {
+                || "SKIP".equals(currentStatus)) {
             return;
         }
 
         List<RecipeIngredientData> ingredients = recipe.getIngredients();
         if (ingredients == null || ingredients.isEmpty()) {
-            recipe.setStatus(Recipe.STATUS_PENDING);
+            recipe.setStatus(Recipe.STATUS_UNMATCHED);
             recipe.setDisplayStatus(DisplayStatus.HIDDEN);
             recipeRepository.save(recipe);
             return;
@@ -129,12 +129,19 @@ public class RecipeService {
                 .filter(name -> name != null && !name.isBlank())
                 .allMatch(mappedRaws::contains);
 
-        if (allMapped) {
-            recipe.setStatus(Recipe.STATUS_SUCCESS);
-            recipe.setDisplayStatus(DisplayStatus.ACTIVE);
-        } else {
-            recipe.setStatus(Recipe.STATUS_PENDING);
+        if (!allMapped) {
+            recipe.setStatus(Recipe.STATUS_UNMATCHED);
             recipe.setDisplayStatus(DisplayStatus.HIDDEN);
+        } else {
+            boolean hasNullAmount = ingredients.stream()
+                    .anyMatch(i -> i.getAmount() == null || i.getAmount().isBlank());
+            if (hasNullAmount) {
+                recipe.setStatus(Recipe.STATUS_INCOMPLETE);
+                recipe.setDisplayStatus(DisplayStatus.HIDDEN);
+            } else {
+                recipe.setStatus(Recipe.STATUS_SUCCESS);
+                recipe.setDisplayStatus(DisplayStatus.ACTIVE);
+            }
         }
         recipeRepository.save(recipe);
     }
