@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yoneodoo.api.admin.GeminiApiService;
 import com.yoneodoo.api.dto.MealPlanResponse;
+import com.yoneodoo.api.entity.RagSearchLog;
+import com.yoneodoo.api.repository.RagSearchLogRepository;
 import com.yoneodoo.api.repository.RecipeEmbeddingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ public class RecipeSearchService {
 
     private final GeminiApiService geminiApiService;
     private final RecipeEmbeddingRepository embeddingRepository;
+    private final RagSearchLogRepository ragSearchLogRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -78,7 +81,24 @@ public class RecipeSearchService {
         // ④ 식단 조합
         String mealPlan = generateMealPlan(candidates, conditions, days, goal, maxCalories, excludeIngredients);
 
+        saveSearchLog(userQuery, conditions, candidates, mealPlan);
+
         return new MealPlanResponse(mealPlan, candidates, conditions);
+    }
+
+    /**
+     * 식단 조합 완료 후 사용 이력을 {@code rag_search_log}에 저장합니다.
+     * userId는 소셜 로그인 도입 전까지 null로 저장합니다. 저장 실패는 검색 결과에 영향 주지 않습니다.
+     */
+    private void saveSearchLog(String userQuery, Map<String, Object> conditions,
+                                List<Map<String, Object>> candidates, String mealPlan) {
+        try {
+            String conditionsJson = objectMapper.writeValueAsString(conditions);
+            String recipesJson = objectMapper.writeValueAsString(candidates);
+            ragSearchLogRepository.save(RagSearchLog.of(null, userQuery, conditionsJson, recipesJson, mealPlan));
+        } catch (Exception e) {
+            log.warn("RAG 검색 로그 저장 실패: {}", e.getMessage());
+        }
     }
 
     /**
