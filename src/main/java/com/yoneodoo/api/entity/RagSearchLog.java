@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnTransformer;
 
 import java.time.LocalDateTime;
 
@@ -32,12 +33,18 @@ public class RagSearchLog {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String query;
 
-    /** Gemini가 추출한 식단 조건(max_calories, exclude_ingredients, goal, days)을 JSON 문자열로 저장. */
+    /**
+     * Gemini가 추출한 식단 조건(max_calories, exclude_ingredients, goal, days)을 JSON 문자열로 저장.
+     * {@code @ColumnTransformer}로 insert/update 시 varchar → jsonb 캐스팅(그렇지 않으면 Hibernate가
+     * String을 varchar 파라미터로 바인딩해 "column is of type jsonb but expression is of type character varying" 오류 발생).
+     */
     @Column(columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String conditions;
 
     /** pgvector 유사도 검색으로 뽑힌 후보 레시피 목록을 JSON 문자열로 저장. */
     @Column(columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String recipes;
 
     /** Gemini가 생성한 N일 식단 텍스트. */
